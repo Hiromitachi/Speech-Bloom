@@ -1,22 +1,32 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: SpeechBloom API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User profile operations
+  - name: exercises
+    description: Exercise library
+  - name: sessions
+    description: Therapy session operations
+  - name: progress
+    description: Progress tracking
+  - name: achievements
+    description: Achievements
+  - name: patients
+    description: Therapist patient management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,318 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/onboard:
+    post:
+      operationId: onboardUser
+      tags: [users]
+      summary: Complete onboarding setup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingInput"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /exercises:
+    get:
+      operationId: listExercises
+      tags: [exercises]
+      summary: List all exercises
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Exercise list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exercise"
+
+  /exercises/{id}:
+    get:
+      operationId: getExercise
+      tags: [exercises]
+      summary: Get exercise by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exercise detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exercise"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List sessions for current user
+      responses:
+        "200":
+          description: Session list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Start a new session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Created session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get session by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+    patch:
+      operationId: updateSession
+      tags: [sessions]
+      summary: Complete or update a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionUpdate"
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}/exercises:
+    post:
+      operationId: logExercise
+      tags: [sessions]
+      summary: Log a completed exercise in a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExerciseLogInput"
+      responses:
+        "201":
+          description: Logged exercise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExerciseLog"
+
+  /progress/summary:
+    get:
+      operationId: getProgressSummary
+      tags: [progress]
+      summary: Get overall progress summary
+      responses:
+        "200":
+          description: Progress summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressSummary"
+
+  /progress/weekly:
+    get:
+      operationId: getWeeklyProgress
+      tags: [progress]
+      summary: Get weekly progress chart data
+      responses:
+        "200":
+          description: Weekly data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyProgress"
+
+  /progress/heatmap:
+    get:
+      operationId: getHeatmap
+      tags: [progress]
+      summary: Get heatmap calendar data
+      responses:
+        "200":
+          description: Heatmap data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HeatmapEntry"
+
+  /progress/category-stats:
+    get:
+      operationId: getCategoryStats
+      tags: [progress]
+      summary: Get per-category exercise stats
+      responses:
+        "200":
+          description: Category stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryStat"
+
+  /achievements:
+    get:
+      operationId: listAchievements
+      tags: [achievements]
+      summary: List all achievements with earned status
+      responses:
+        "200":
+          description: Achievement list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Achievement"
+
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: List therapist's patients
+      responses:
+        "200":
+          description: Patient list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      operationId: addPatient
+      tags: [patients]
+      summary: Add a patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientInput"
+      responses:
+        "201":
+          description: Added patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /patients/{id}/progress:
+    get:
+      operationId: getPatientProgress
+      tags: [patients]
+      summary: Get a patient's progress summary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Patient progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +356,314 @@ components:
       required:
         - status
 
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [patient, therapist, parent]
+        goals:
+          type: array
+          items:
+            type: string
+        dailyMinutes:
+          type: integer
+        currentStreak:
+          type: integer
+        longestStreak:
+          type: integer
+        totalMinutes:
+          type: integer
+        onboardingComplete:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - role
+        - goals
+        - dailyMinutes
+        - currentStreak
+        - longestStreak
+        - totalMinutes
+        - onboardingComplete
+        - createdAt
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        dailyMinutes:
+          type: integer
+        goals:
+          type: array
+          items:
+            type: string
+
+    OnboardingInput:
+      type: object
+      properties:
+        name:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+        dailyMinutes:
+          type: integer
+      required:
+        - name
+        - goals
+        - dailyMinutes
+
+    Exercise:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        instructions:
+          type: string
+        reps:
+          type: ["integer", "null"]
+        durationSeconds:
+          type: ["integer", "null"]
+        rounds:
+          type: ["integer", "null"]
+        exerciseType:
+          type: string
+          enum: [timer, reps, bilateral]
+        sortOrder:
+          type: integer
+      required:
+        - id
+        - name
+        - category
+        - instructions
+        - exerciseType
+        - sortOrder
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        date:
+          type: string
+        durationSeconds:
+          type: integer
+        exercisesCompleted:
+          type: integer
+        totalExercises:
+          type: integer
+        completionPercent:
+          type: integer
+        completed:
+          type: boolean
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExerciseLog"
+      required:
+        - id
+        - userId
+        - date
+        - durationSeconds
+        - exercisesCompleted
+        - totalExercises
+        - completionPercent
+        - completed
+
+    SessionInput:
+      type: object
+      properties:
+        totalExercises:
+          type: integer
+      required:
+        - totalExercises
+
+    SessionUpdate:
+      type: object
+      properties:
+        durationSeconds:
+          type: integer
+        completed:
+          type: boolean
+
+    ExerciseLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+        exerciseId:
+          type: integer
+        exerciseName:
+          type: string
+        repsCompleted:
+          type: ["integer", "null"]
+        durationSeconds:
+          type: ["integer", "null"]
+        completedAt:
+          type: string
+      required:
+        - id
+        - sessionId
+        - exerciseId
+        - exerciseName
+        - completedAt
+
+    ExerciseLogInput:
+      type: object
+      properties:
+        exerciseId:
+          type: integer
+        repsCompleted:
+          type: ["integer", "null"]
+        durationSeconds:
+          type: ["integer", "null"]
+      required:
+        - exerciseId
+
+    ProgressSummary:
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+        currentStreak:
+          type: integer
+        longestStreak:
+          type: integer
+        totalMinutes:
+          type: integer
+        totalExercisesCompleted:
+          type: integer
+        todayCompletionPercent:
+          type: integer
+        weeklyGoalPercent:
+          type: integer
+        mostImprovedCategory:
+          type: string
+      required:
+        - totalSessions
+        - currentStreak
+        - longestStreak
+        - totalMinutes
+        - totalExercisesCompleted
+        - todayCompletionPercent
+        - weeklyGoalPercent
+
+    DailyProgress:
+      type: object
+      properties:
+        date:
+          type: string
+        minutesPracticed:
+          type: integer
+        exercisesCompleted:
+          type: integer
+        sessionCount:
+          type: integer
+      required:
+        - date
+        - minutesPracticed
+        - exercisesCompleted
+        - sessionCount
+
+    HeatmapEntry:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+      required:
+        - date
+        - count
+
+    CategoryStat:
+      type: object
+      properties:
+        category:
+          type: string
+        exercisesCompleted:
+          type: integer
+        masteryPercent:
+          type: integer
+      required:
+        - category
+        - exercisesCompleted
+        - masteryPercent
+
+    Achievement:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        earned:
+          type: boolean
+        earnedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - description
+        - icon
+        - earned
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        lastSession:
+          type: ["string", "null"]
+        currentStreak:
+          type: integer
+        completionPercent:
+          type: integer
+        totalSessions:
+          type: integer
+      required:
+        - id
+        - name
+        - email
+        - currentStreak
+        - completionPercent
+        - totalSessions
+
+    PatientInput:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+      required:
+        - email
+        - name
