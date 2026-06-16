@@ -39,13 +39,13 @@ const P = {
 
 const EXERCISES: ExDef[] = [
   {
-    id: 1, name: "Abdominal Breathing", subtitle: "30 · 30 · 30", icon: "🌬️",
+    id: 1, name: "Abdominal Breathing", subtitle: "15 · 30 · 15", icon: "🌬️",
     instruction: "Place one hand on your chest and one on your abdomen.\nBreathe using your abdomen, not your chest.",
     type: "phase-once", rounds: 1,
     phases: [
-      { ...P.inhale, label: "INHALE", duration: 30, hint: "Breathe in slowly through your nose" },
+      { ...P.inhale, label: "INHALE", duration: 15, hint: "Breathe in slowly through your nose" },
       { ...P.hold,   label: "HOLD",   duration: 30, hint: "Hold gently — abdomen expanded" },
-      { ...P.exhale, label: "EXHALE", duration: 30, hint: "Breathe out slowly through pursed lips" },
+      { ...P.exhale, label: "EXHALE", duration: 15, hint: "Breathe out slowly through pursed lips" },
     ],
   },
   { id: 2,  name: "Effortful Swallow",       icon: "💧", instruction: "Swallow hard, as if swallowing a large bite.\nFeel the muscles in your throat work.",              type: "rep-counter", reps: 6 },
