@@ -1,0 +1,210 @@
+Make these exact changes to the SpeechBloom exercise flow.
+
+This is a fixed guided routine. Do not ask the user to choose exercises or time.
+
+Important:
+Abdominal Breathing and 30-30-30 are NOT separate exercises.
+Exercise 1 itself is Abdominal Breathing using 30-30-30 timing.
+
+Add a short break after every exercise:
+Break time: 10 seconds
+Screen text: “Relax. Next exercise is coming.”
+
+UPDATED EXERCISE FLOW:
+
+1. Abdominal Breathing — 30-30-30
+Instruction:
+Place one hand on chest and one on abdomen.
+Breathe using your abdomen.
+
+Timer flow:
+30 sec inhale
+30 sec hold
+30 sec exhale
+
+Rounds: 1
+
+2. Effortful Swallow
+Instruction:
+Swallow hard like swallowing a large bite.
+Repetitions: 6
+Use counter 0/6.
+
+3. Masako Maneuver
+Instruction:
+Hold tongue gently between teeth and swallow.
+Repetitions: 6
+Use counter 0/6.
+
+4. Tongue Side-to-Side
+Instruction:
+Move tongue left and right.
+Repetitions: 6
+Use counter 0/6.
+
+5. Tongue Up and Down
+Instruction:
+Move tongue up and down.
+Repetitions: 6
+Use counter 0/6.
+
+6. Tongue Round Movement
+Instruction:
+Move tongue in a circle around lips.
+Repetitions: 6
+Use counter 0/6.
+
+7. Tongue Resistance
+Instruction:
+Press tongue against resistance.
+Repetitions: 6
+Use counter 0/6.
+
+8. Cheek Puff Breathing
+Instruction:
+Take air into your mouth, puff both cheeks, hold, then slowly release.
+
+Timer flow:
+10 sec inhale
+10 sec hold cheeks puffed
+10 sec exhale/release
+
+Repetitions: 6
+
+9. Cheek Side-to-Side
+Instruction:
+Move air from left cheek to right cheek.
+Repetitions: 6
+Use counter 0/6.
+
+10. Say A I U
+Instruction:
+Take a deep breath, then say A, I, U slowly and clearly while exhaling.
+
+Timer flow per repetition:
+5 sec inhale
+10 sec exhale/say A-I-U
+
+Repetitions: 6
+
+11. Pa Pa Pa — Section 1
+Instruction:
+Say “Pa Pa Pa” clearly until the timer ends.
+
+Timer:
+20 seconds
+
+12. Pa Pa Pa — Section 2
+Instruction:
+Say “Pa Pa Pa” clearly until the timer ends.
+
+Timer:
+20 seconds
+
+13. Pa Da Ka — Section 1
+Instruction:
+Say “Pa Da Ka” clearly until the timer ends.
+
+Timer:
+20 seconds
+
+14. Pa Da Ka — Section 2
+Instruction:
+Say “Pa Da Ka” clearly until the timer ends.
+
+Timer:
+20 seconds
+
+15. Deep Inhalation and Phonate A
+Instruction:
+Take a deep breath and say “Aaaaa” while exhaling.
+
+Timer flow per repetition:
+5 sec inhale
+10 sec phonate Aaaaa
+
+Repetitions: 6
+
+16. Head Tilt Left and Phonate A
+Instruction:
+Tilt head left, take a deep breath, and say “Aaaaa”.
+
+Timer flow per repetition:
+5 sec inhale
+10 sec phonate Aaaaa
+
+Repetitions: 3
+
+17. Head Tilt Right and Phonate A
+Instruction:
+Tilt head right, take a deep breath, and say “Aaaaa”.
+
+Timer flow per repetition:
+5 sec inhale
+10 sec phonate Aaaaa
+
+Repetitions: 3
+
+18. Tongue Trill / Drrrr Sound
+Instruction:
+Say “Drrrrrr” continuously until the timer ends.
+
+Timer:
+20 seconds
+
+Repetitions:
+6 rounds of 20 seconds each
+
+19. R Word Practice
+Show these words as flashcards:
+
+ring, rock, roof, radio,
+rabbit, roses, raisins, rectangle,
+red, rain, run, raccoon,
+rope, rice, rocket, read,
+remote, robot, ride, rug
+
+Each word:
+Repeat 3 times.
+Show counter 0/3.
+
+20. R Sound Practice
+Practice:
+
+r...ah
+r...ay
+r...ee
+r...i
+r...o
+r...oo
+
+Each sound:
+Repeat 3 times.
+Show counter 0/3.
+
+Every timer screen must clearly show:
+- Current phase: inhale / hold / exhale / speak / break
+- Seconds remaining
+- Current repetition or round
+- Exercise number, like Exercise 8 of 20
+
+The app should feel like an exercise buddy:
+Use friendly buddy messages like:
+“Nice and slow.”
+“You’re doing great.”
+“Almost there.”
+“Relax your shoulders.”
+“Take your time.”
+
+After all exercises, show:
+Session Complete
+
+Message:
+“Great job! You completed today’s full speech therapy routine.”
+
+Save to dashboard:
+- Date
+- Total exercises completed
+- Total time practiced
+- Streak
+- Exercise-wise completion
