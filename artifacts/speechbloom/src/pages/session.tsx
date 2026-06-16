@@ -142,6 +142,19 @@ const EXERCISES: ExDef[] = [
 
 const TOTAL = EXERCISES.length;
 
+const BREAK_MESSAGES = [
+  { icon: "💧", text: "Take a sip of water" },
+  { icon: "🙆", text: "Roll your shoulders back" },
+  { icon: "👐", text: "Shake out your hands gently" },
+  { icon: "😮‍💨", text: "Let out a long, slow breath" },
+  { icon: "😌", text: "Let your jaw unclench" },
+  { icon: "🧘", text: "Close your eyes for a moment" },
+  { icon: "💆", text: "Drop your shoulders down" },
+  { icon: "🌿", text: "You're doing so well" },
+  { icon: "🫁", text: "Breathe naturally for a second" },
+  { icon: "✨", text: "Relax — you've earned this break" },
+];
+
 const BUDDY = [
   "Nice and slow. 🌿",
   "You're doing great! ✨",
@@ -192,12 +205,17 @@ export default function Session() {
 
   // Break state
   const [breakLeft, setBreakLeft] = useState(10);
+  const [breakMsgIdx, setBreakMsgIdx] = useState(0);
 
   // Session metadata
   const [sessionId, setSessionId] = useState<number | null>(null);
   const sessionStartRef = useRef(Date.now());
   const [buddySeed, setBuddySeed] = useState(0);
   const repJustDoneRef = useRef(false);
+
+  // Audio refs
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const stopMusicRef = useRef<(() => void) | null>(null);
 
   const ex = EXERCISES[exIdx];
 
@@ -227,6 +245,64 @@ export default function Session() {
     const id = setTimeout(() => setBreakLeft(t => t - 1), 1000);
     return () => clearTimeout(id);
   }, [screen, breakLeft]);
+
+  // ── Break message cycling (every 3.5s) ───────────────────────────────────
+  useEffect(() => {
+    if (screen !== "break") return;
+    setBreakMsgIdx(0);
+    const id = setInterval(() => setBreakMsgIdx(i => i + 1), 3500);
+    return () => clearInterval(id);
+  }, [screen, exIdx]);
+
+  // ── Ambient music during break ────────────────────────────────────────────
+  useEffect(() => {
+    if (screen !== "break") {
+      stopMusicRef.current?.();
+      stopMusicRef.current = null;
+      return;
+    }
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") ctx.resume();
+
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(0, ctx.currentTime);
+      master.gain.linearRampToValueAtTime(0.055, ctx.currentTime + 2);
+      master.connect(ctx.destination);
+
+      // Soft major 7th chord: C4 · E4 · G4 · B4 (very gentle)
+      const freqs = [261.63, 329.63, 392.0, 493.88];
+      const oscs = freqs.map((freq, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        // Slight detune per voice for warmth
+        osc.detune.value = (i % 2 === 0 ? 1 : -1) * 2;
+
+        const g = ctx.createGain();
+        g.gain.value = 0.25;
+        osc.connect(g);
+        g.connect(master);
+        osc.start();
+        return osc;
+      });
+
+      stopMusicRef.current = () => {
+        master.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.2);
+        setTimeout(() => oscs.forEach(o => { try { o.stop(); } catch {} }), 1400);
+      };
+    } catch {
+      // AudioContext blocked (e.g. browser policy) — silently skip
+    }
+
+    return () => {
+      stopMusicRef.current?.();
+      stopMusicRef.current = null;
+    };
+  }, [screen]);
 
   // ── Handle timer hitting 0 ────────────────────────────────────────────────
   useEffect(() => {
@@ -490,29 +566,67 @@ export default function Session() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
-              className="flex-1 flex flex-col items-center justify-center gap-8"
+              className="flex-1 flex flex-col items-center justify-center gap-7"
             >
-              {/* Gentle pulsing orb */}
-              <div className="relative w-48 h-48 flex items-center justify-center">
+              {/* Gentle pulsing orb with countdown */}
+              <div className="relative w-44 h-44 flex items-center justify-center">
                 <motion.div
-                  className="absolute inset-0 rounded-full bg-[#C7F1D5]/60"
-                  animate={{ scale: [1, 1.08, 1] }}
-                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                  className="absolute inset-0 rounded-full bg-[#C7F1D5]/50"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut" }}
                 />
-                <div className="w-36 h-36 rounded-full bg-[#C7F1D5] flex items-center justify-center shadow-md z-10">
-                  <span className="text-5xl font-black text-[#1E7A4A]">{breakLeft}</span>
+                <motion.div
+                  className="absolute inset-3 rounded-full bg-[#C7F1D5]/40"
+                  animate={{ scale: [1, 1.06, 1] }}
+                  transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut", delay: 0.4 }}
+                />
+                <div className="w-32 h-32 rounded-full bg-[#C7F1D5] flex flex-col items-center justify-center shadow-md z-10 gap-0.5">
+                  <span className="text-4xl font-black text-[#1E7A4A]">{breakLeft}</span>
+                  <span className="text-xs font-bold text-[#1E7A4A]/60 tracking-wider uppercase">sec</span>
                 </div>
               </div>
 
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold text-foreground">Relax.</h2>
-                <p className="text-muted-foreground font-medium">Next exercise is coming…</p>
-                {exIdx + 1 < TOTAL && (
-                  <p className="text-sm text-muted-foreground/70 mt-2">
-                    Up next: {EXERCISES[exIdx + 1].icon} {EXERCISES[exIdx + 1].name}
-                  </p>
-                )}
+              {/* Cycling break message */}
+              <div className="text-center space-y-2 px-4">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={breakMsgIdx}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.45 }}
+                    className="flex flex-col items-center gap-2"
+                  >
+                    <span className="text-4xl">{BREAK_MESSAGES[breakMsgIdx % BREAK_MESSAGES.length].icon}</span>
+                    <p className="text-xl font-bold text-foreground">
+                      {BREAK_MESSAGES[breakMsgIdx % BREAK_MESSAGES.length].text}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
               </div>
+
+              {/* Music indicator */}
+              <div className="flex items-center gap-1.5 text-[#1E7A4A]/50">
+                {[0,1,2,3,4].map(i => (
+                  <motion.div
+                    key={i}
+                    className="w-1 rounded-full bg-[#1E7A4A]/40"
+                    animate={{ height: ["8px", `${14 + i * 4}px`, "8px"] }}
+                    transition={{ repeat: Infinity, duration: 0.9 + i * 0.15, ease: "easeInOut", delay: i * 0.12 }}
+                  />
+                ))}
+                <span className="text-xs font-medium ml-1 text-[#1E7A4A]/40">calm music</span>
+              </div>
+
+              {/* Next exercise preview */}
+              {exIdx + 1 < TOTAL && (
+                <div className="bg-white/60 rounded-2xl px-5 py-3 text-center border border-[#C7F1D5]">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Up next</p>
+                  <p className="text-sm font-bold text-foreground">
+                    {EXERCISES[exIdx + 1].icon} {EXERCISES[exIdx + 1].name}
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
 
