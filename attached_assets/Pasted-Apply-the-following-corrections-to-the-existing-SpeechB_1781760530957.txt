@@ -1,0 +1,179 @@
+Apply the following corrections to the existing SpeechBloom app only. Do not rebuild, redesign, or modify unrelated functionality.
+
+### 1. Abdominal Breathing Fix
+
+Currently it runs only once.
+
+Change it to 3 rounds.
+
+Each round:
+
+* 10 sec inhale
+* 15 sec hold
+* 10 sec exhale
+
+Show:
+
+* Round 1 of 3
+* Round 2 of 3
+* Round 3 of 3
+
+### 2. Global Timing Update
+
+Replace all 10-second breathing/phonation timers that were previously used for hold/speaking phases.
+
+Use:
+
+* 10 sec inhale
+* 15 sec hold
+* 15 sec phonation/speaking
+
+where applicable.
+
+### 3. Cheek Puff Update
+
+Each repetition should be:
+
+* 10 sec inhale
+* 15 sec hold cheeks puffed
+* 10 sec exhale
+
+Repeat 6 times.
+
+### 4. A-I-U Exercise Fix
+
+Currently only A has a timer.
+
+This is incorrect.
+
+For each repetition:
+
+* 10 sec inhale
+* 15 sec say Aaaaa
+* 5 sec pause
+* 15 sec say Iiiii
+* 5 sec pause
+* 15 sec say Uuuuu
+
+Repeat entire sequence 6 times.
+
+Show repetition count.
+
+### 5. Pa Pa Pa Fix
+
+Remove the current implementation.
+
+New structure:
+
+6 rounds total.
+
+Each round:
+
+* 5 sec speaking
+* 3 sec pause
+
+Show:
+
+Round 1 of 6
+Round 2 of 6
+...
+Round 6 of 6
+
+Add rhythm/pulse animation.
+
+### 6. Pa Da Ka Fix
+
+Remove the current implementation.
+
+New structure:
+
+6 rounds total.
+
+Each round:
+
+* 5 sec speaking
+* 3 sec pause
+
+Show:
+
+Round 1 of 6
+Round 2 of 6
+...
+Round 6 of 6
+
+Add rhythm/pulse animation.
+
+### 7. Tongue Trill (Drrrr) Fix
+
+Replace continuous timer.
+
+Use:
+
+Round 1:
+
+* 10 sec Drrrr
+* 5 sec pause
+
+Round 2:
+
+* 10 sec Drrrr
+* 5 sec pause
+
+Round 3:
+
+* 10 sec Drrrr
+* 5 sec pause
+
+Round 4:
+
+* 10 sec Drrrr
+* 5 sec pause
+
+Round 5:
+
+* 10 sec Drrrr
+* 5 sec pause
+
+Round 6:
+
+* 10 sec Drrrr
+
+Show round count.
+
+### 8. Audio Cue System
+
+Add pleasant "ting-ting" sound when:
+
+* Timer ends
+* Phase changes
+* Exercise completes
+* Break starts
+* Break ends
+* Next exercise begins
+
+Purpose:
+The user should be able to perform the therapy session without constantly looking at the screen.
+
+### 9. Break System
+
+After every exercise:
+
+* 15-second break
+* Countdown visible
+* Message:
+  "Relax. Next exercise is coming."
+
+Play start and end break sounds.
+
+### 10. Do Not Change
+
+Do not change:
+
+* theme
+* layout
+* dashboard
+* progress tracking
+* exercise order
+* navigation
+
+Only apply the above corrections.

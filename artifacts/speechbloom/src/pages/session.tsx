@@ -23,6 +23,8 @@ type ExDef = {
   duration?: number;
   items?: string[];
   itemReps?: number;
+  useRoundLabel?: boolean;
+  isRhythm?: boolean;
 };
 
 // ─── Phase color palette ─────────────────────────────────────────────────────
@@ -38,102 +40,121 @@ const P = {
 // ─── Exercise list ───────────────────────────────────────────────────────────
 
 const EXERCISES: ExDef[] = [
+  // ── 1. Abdominal Breathing — 3 rounds × (10 inhale · 15 hold · 10 exhale) ──
   {
-    id: 1, name: "Abdominal Breathing", subtitle: "15 · 30 · 15", icon: "🌬️",
+    id: 1, name: "Abdominal Breathing", subtitle: "3 rounds · 10·15·10", icon: "🌬️",
     instruction: "Place one hand on your chest and one on your abdomen.\nBreathe using your abdomen, not your chest.",
-    type: "phase-once", rounds: 1,
+    type: "phase-rep", reps: 3, useRoundLabel: true,
     phases: [
-      { ...P.inhale, label: "INHALE", duration: 15, hint: "Breathe in slowly through your nose" },
-      { ...P.hold,   label: "HOLD",   duration: 30, hint: "Hold gently — abdomen expanded" },
-      { ...P.exhale, label: "EXHALE", duration: 15, hint: "Breathe out slowly through pursed lips" },
+      { ...P.inhale, label: "INHALE", duration: 10, hint: "Breathe in slowly through your nose" },
+      { ...P.hold,   label: "HOLD",   duration: 15, hint: "Hold gently — abdomen expanded" },
+      { ...P.exhale, label: "EXHALE", duration: 10, hint: "Breathe out slowly through pursed lips" },
     ],
   },
-  { id: 2,  name: "Effortful Swallow",       icon: "💧", instruction: "Swallow hard, as if swallowing a large bite.\nFeel the muscles in your throat work.",              type: "rep-counter", reps: 6 },
-  { id: 3,  name: "Masako Maneuver",          icon: "👅", instruction: "Hold your tongue gently between your teeth.\nSwallow while keeping your tongue forward.",          type: "rep-counter", reps: 6 },
-  { id: 4,  name: "Tongue Side to Side",      icon: "↔️", instruction: "Move your tongue slowly from corner to corner.\nTouch the inside of each cheek.",                    type: "rep-counter", reps: 6 },
-  { id: 5,  name: "Tongue Up and Down",       icon: "↕️", instruction: "Stretch your tongue up toward your nose,\nthen down toward your chin.",                            type: "rep-counter", reps: 6 },
-  { id: 6,  name: "Tongue Round Movement",    icon: "🔄", instruction: "Move your tongue in a full circle\naround the outside of your lips.",                              type: "rep-counter", reps: 6 },
-  { id: 7,  name: "Tongue Resistance",        icon: "💪", instruction: "Press your tongue firmly against the roof of your mouth\nor against a clean spoon for resistance.", type: "rep-counter", reps: 6 },
+  // ── 2–7. Rep-counter exercises ────────────────────────────────────────────
+  { id: 2,  name: "Effortful Swallow",    icon: "💧", instruction: "Swallow hard, as if swallowing a large bite.\nFeel the muscles in your throat work.",              type: "rep-counter", reps: 6 },
+  { id: 3,  name: "Masako Maneuver",      icon: "👅", instruction: "Hold your tongue gently between your teeth.\nSwallow while keeping your tongue forward.",          type: "rep-counter", reps: 6 },
+  { id: 4,  name: "Tongue Side to Side",  icon: "↔️", instruction: "Move your tongue slowly from corner to corner.\nTouch the inside of each cheek.",                  type: "rep-counter", reps: 6 },
+  { id: 5,  name: "Tongue Up and Down",   icon: "↕️", instruction: "Stretch your tongue up toward your nose,\nthen down toward your chin.",                          type: "rep-counter", reps: 6 },
+  { id: 6,  name: "Tongue Round Movement",icon: "🔄", instruction: "Move your tongue in a full circle\naround the outside of your lips.",                            type: "rep-counter", reps: 6 },
+  { id: 7,  name: "Tongue Resistance",    icon: "💪", instruction: "Press your tongue firmly against the roof of your mouth\nor against a clean spoon for resistance.", type: "rep-counter", reps: 6 },
+  // ── 8. Cheek Puff — 6 reps × (10 inhale · 15 hold · 10 exhale) ───────────
   {
     id: 8, name: "Cheek Puff Breathing", icon: "🐡",
     instruction: "Fill your cheeks with air, puff both out,\nthen slowly release.",
     type: "phase-rep", reps: 6,
     phases: [
       { ...P.inhale, duration: 10, hint: "Breathe in and fill your cheeks" },
-      { ...P.hold,   duration: 10, hint: "Keep cheeks puffed — hold it" },
+      { ...P.hold,   duration: 15, hint: "Keep cheeks puffed — hold it" },
       { ...P.exhale, duration: 10, hint: "Slowly release the air" },
     ],
   },
+  // ── 9. Rep counter ────────────────────────────────────────────────────────
   { id: 9, name: "Cheek Side to Side", icon: "🔁", instruction: "Push the air from your left cheek\nover to your right cheek, back and forth.", type: "rep-counter", reps: 6 },
+  // ── 10. A · I · U — 6 reps × (10 inhale · 15 A · 5 pause · 15 I · 5 pause · 15 U) ──
   {
     id: 10, name: "Say A · I · U", icon: "🗣️",
-    instruction: "Breathe in deeply, then say A, I, U slowly and clearly\nas you exhale. Open your mouth wide for each sound.",
+    instruction: "Breathe in, then say A, I, U in sequence with short pauses between.\nOpen your mouth wide for each vowel sound.",
     type: "phase-rep", reps: 6,
     phases: [
-      { ...P.inhale, duration: 5,  hint: "Breathe in deeply" },
-      { ...P.speak,  duration: 10, hint: "A … I … U — slowly and clearly" },
+      { ...P.inhale, label: "INHALE", duration: 10, hint: "Breathe in deeply" },
+      { ...P.speak,  label: "Aaaaa",  duration: 15, hint: "Say \"Aaaaa\" — long and steady" },
+      { ...P.hold,   label: "PAUSE",  duration: 5,  hint: "Short pause" },
+      { ...P.speak,  label: "Iiiii",  duration: 15, hint: "Say \"Iiiii\" — long and steady" },
+      { ...P.hold,   label: "PAUSE",  duration: 5,  hint: "Short pause" },
+      { ...P.speak,  label: "Uuuuu",  duration: 15, hint: "Say \"Uuuuu\" — long and steady" },
     ],
   },
+  // ── 11. Pa Pa Pa — 6 rounds × (5s speak · 3s pause) ─────────────────────
   {
-    id: 11, name: "Pa Pa Pa", subtitle: "Section 1 of 2", icon: "🔊",
-    instruction: "Say \"Pa Pa Pa\" clearly and rhythmically\nuntil the timer ends. Keep going!",
-    type: "countdown", duration: 20,
+    id: 11, name: "Pa Pa Pa", icon: "🔊", isRhythm: true, useRoundLabel: true,
+    instruction: "Say \"Pa Pa Pa\" clearly and rhythmically.\nKeep a steady beat through each round.",
+    type: "phase-rep", reps: 6,
+    phases: [
+      { ...P.speak, label: "SPEAK", duration: 5, hint: "Pa · Pa · Pa · Pa · Pa" },
+      { ...P.hold,  label: "PAUSE", duration: 3, hint: "Rest — next round coming…" },
+    ],
   },
+  // ── 12. Pa Da Ka — 6 rounds × (5s speak · 3s pause) ─────────────────────
   {
-    id: 12, name: "Pa Pa Pa", subtitle: "Section 2 of 2", icon: "🔊",
-    instruction: "Keep going — \"Pa Pa Pa\"\nclearly and rhythmically until the timer ends.",
-    type: "countdown", duration: 20,
+    id: 12, name: "Pa Da Ka", icon: "🎵", isRhythm: true, useRoundLabel: true,
+    instruction: "Say \"Pa Da Ka\" clearly and rhythmically.\nKeep a steady beat through each round.",
+    type: "phase-rep", reps: 6,
+    phases: [
+      { ...P.speak, label: "SPEAK", duration: 5, hint: "Pa · Da · Ka · Pa · Da · Ka" },
+      { ...P.hold,  label: "PAUSE", duration: 3, hint: "Rest — next round coming…" },
+    ],
   },
+  // ── 13. Deep Inhalation & Phonate A — 6 reps × (10 inhale · 15 phonate) ──
   {
-    id: 13, name: "Pa Da Ka", subtitle: "Section 1 of 2", icon: "🎵",
-    instruction: "Say \"Pa Da Ka\" clearly and rhythmically\nuntil the timer ends.",
-    type: "countdown", duration: 20,
-  },
-  {
-    id: 14, name: "Pa Da Ka", subtitle: "Section 2 of 2", icon: "🎵",
-    instruction: "Keep going — \"Pa Da Ka\"\nclearly and rhythmically until the timer ends.",
-    type: "countdown", duration: 20,
-  },
-  {
-    id: 15, name: "Deep Inhalation & Phonate A", icon: "🎤",
+    id: 13, name: "Deep Inhalation & Phonate A", icon: "🎤",
     instruction: "Take a deep breath, then say \"Aaaaa\" steadily\nfor as long as you can while exhaling.",
     type: "phase-rep", reps: 6,
     phases: [
-      { ...P.inhale,  duration: 5,  hint: "Breathe in deeply" },
-      { ...P.phonate, duration: 10, hint: "\"Aaaaa\" — steady and clear" },
+      { ...P.inhale,  duration: 10, hint: "Breathe in deeply" },
+      { ...P.phonate, duration: 15, hint: "\"Aaaaa\" — steady and clear" },
     ],
   },
+  // ── 14. Head Tilt Left — 3 reps × (10 inhale · 15 phonate) ──────────────
   {
-    id: 16, name: "Head Tilt Left & Phonate", icon: "↖️",
+    id: 14, name: "Head Tilt Left & Phonate", icon: "↖️",
     instruction: "Gently tilt your head to the left.\nBreathe in, then say \"Aaaaa\" while exhaling.",
     type: "phase-rep", reps: 3,
     phases: [
-      { ...P.inhale,  duration: 5,  hint: "Head tilted left — breathe in" },
-      { ...P.phonate, duration: 10, hint: "\"Aaaaa\" — steady tone" },
+      { ...P.inhale,  duration: 10, hint: "Head tilted left — breathe in" },
+      { ...P.phonate, duration: 15, hint: "\"Aaaaa\" — steady tone" },
     ],
   },
+  // ── 15. Head Tilt Right — 3 reps × (10 inhale · 15 phonate) ─────────────
   {
-    id: 17, name: "Head Tilt Right & Phonate", icon: "↗️",
+    id: 15, name: "Head Tilt Right & Phonate", icon: "↗️",
     instruction: "Gently tilt your head to the right.\nBreathe in, then say \"Aaaaa\" while exhaling.",
     type: "phase-rep", reps: 3,
     phases: [
-      { ...P.inhale,  duration: 5,  hint: "Head tilted right — breathe in" },
-      { ...P.phonate, duration: 10, hint: "\"Aaaaa\" — steady tone" },
+      { ...P.inhale,  duration: 10, hint: "Head tilted right — breathe in" },
+      { ...P.phonate, duration: 15, hint: "\"Aaaaa\" — steady tone" },
     ],
   },
+  // ── 16. Tongue Trill — 6 rounds × (10s Drrrr · 5s pause) ─────────────────
   {
-    id: 18, name: "Tongue Trill", subtitle: "Drrrr Sound", icon: "🌀",
-    instruction: "Say \"Drrrrrr\" continuously,\nrolling your tongue, until the timer ends.",
-    type: "multi-round", rounds: 6, duration: 20,
+    id: 16, name: "Tongue Trill", subtitle: "Drrrr Sound", icon: "🌀",
+    instruction: "Say \"Drrrrrr\" continuously, rolling your tongue.\nHold the trill for the full duration.",
+    type: "phase-rep", reps: 6, useRoundLabel: true,
+    phases: [
+      { ...P.speak, label: "TRILL", duration: 10, hint: "Drrrrrr — roll your tongue continuously" },
+      { ...P.hold,  label: "PAUSE", duration: 5,  hint: "Short rest between rounds" },
+    ],
   },
+  // ── 17. R Word Practice ────────────────────────────────────────────────────
   {
-    id: 19, name: "R Word Practice", icon: "📖",
+    id: 17, name: "R Word Practice", icon: "📖",
     instruction: "Say each word clearly, 3 times.\nTap \"Said it!\" after each repetition.",
     type: "flashcard", itemReps: 3,
     items: ["ring", "rock", "roof", "radio", "rabbit", "roses", "raisins", "rectangle", "red", "rain", "run", "raccoon", "rope", "rice", "rocket", "read", "remote", "robot", "ride", "rug"],
   },
+  // ── 18. R Sound Practice ──────────────────────────────────────────────────
   {
-    id: 20, name: "R Sound Practice", icon: "🎯",
+    id: 18, name: "R Sound Practice", icon: "🎯",
     instruction: "Blend each R sound slowly and clearly, 3 times.\nTap \"Said it!\" after each repetition.",
     type: "flashcard", itemReps: 3,
     items: ["r...ah", "r...ay", "r...ee", "r...i", "r...o", "r...oo"],
@@ -174,11 +195,49 @@ const BUDDY = [
 
 function buddy(seed: number) { return BUDDY[seed % BUDDY.length]; }
 
-function phaseAnimation(label: string): TargetAndTransition {
-  if (label === "INHALE")  return { scale: [1, 1.28], transition: { duration: 4, ease: "easeOut" as const } };
+// ─── Audio helpers ────────────────────────────────────────────────────────────
+
+function getOrCreateCtx(ref: React.MutableRefObject<AudioContext | null>): AudioContext | null {
+  try {
+    if (!ref.current) ref.current = new AudioContext();
+    if (ref.current.state === "suspended") ref.current.resume();
+    return ref.current;
+  } catch { return null; }
+}
+
+type TingType = "phase" | "break-start" | "break-end" | "complete";
+
+function playTing(ref: React.MutableRefObject<AudioContext | null>, type: TingType = "phase") {
+  const ctx = getOrCreateCtx(ref);
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const configs: Record<TingType, Array<{ freq: number; t: number; vol: number }>> = {
+    "phase":       [{ freq: 880,  t: 0,    vol: 0.22 }],
+    "break-start": [{ freq: 880,  t: 0,    vol: 0.18 }, { freq: 1100, t: 0.28, vol: 0.14 }],
+    "break-end":   [{ freq: 1100, t: 0,    vol: 0.18 }, { freq: 880,  t: 0.28, vol: 0.14 }],
+    "complete":    [{ freq: 880,  t: 0,    vol: 0.18 }, { freq: 1100, t: 0.28, vol: 0.18 }, { freq: 1320, t: 0.56, vol: 0.14 }],
+  };
+  for (const { freq, t, vol } of configs[type]) {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(vol, now + t);
+    g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.9);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(now + t);
+    osc.stop(now + t + 1.0);
+  }
+}
+
+function phaseAnimation(label: string, duration = 4): TargetAndTransition {
+  if (label === "INHALE")  return { scale: [1, 1.28],         transition: { duration, ease: "easeOut" as const } };
   if (label === "HOLD")    return { scale: [1.28, 1.26, 1.28], transition: { repeat: Infinity, duration: 2, ease: "easeInOut" as const } };
-  if (label === "EXHALE")  return { scale: [1.28, 1], transition: { duration: 4, ease: "easeIn" as const } };
-  return { scale: [1.1, 1.15, 1.1], transition: { repeat: Infinity, duration: 0.4, ease: "easeInOut" as const } };
+  if (label === "EXHALE")  return { scale: [1.28, 1],          transition: { duration, ease: "easeIn" as const } };
+  if (label === "PAUSE")   return { scale: [1.05, 1.03, 1.05], transition: { repeat: Infinity, duration: 1.8, ease: "easeInOut" as const } };
+  // SPEAK, PHONATE, Aaaaa, Iiiii, Uuuuu, TRILL, etc.
+  return { scale: [1.1, 1.16, 1.1], transition: { repeat: Infinity, duration: 0.44, ease: "easeInOut" as const } };
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -323,6 +382,7 @@ export default function Session() {
       const phases = ex.phases!;
       if (phaseIdx < phases.length - 1) {
         const next = phaseIdx + 1;
+        playTing(audioCtxRef, "phase");
         setPhaseIdx(next);
         setBuddySeed(s => s + 1);
         setTimeLeft(phases[next].duration);
@@ -334,12 +394,14 @@ export default function Session() {
       const phases = ex.phases!;
       if (phaseIdx < phases.length - 1) {
         const next = phaseIdx + 1;
+        playTing(audioCtxRef, "phase");
         setPhaseIdx(next);
         setTimeLeft(phases[next].duration);
         setTimerOn(true);
       } else {
         const nextRep = rep + 1;
         if (nextRep < ex.reps!) {
+          playTing(audioCtxRef, "phase");
           setRep(nextRep);
           setPhaseIdx(0);
           setBuddySeed(s => s + 1);
@@ -354,6 +416,7 @@ export default function Session() {
     } else if (ex.type === "multi-round") {
       const nextRound = round + 1;
       if (nextRound < ex.rounds!) {
+        playTing(audioCtxRef, "phase");
         setRound(nextRound);
         setBuddySeed(s => s + 1);
         setTimeLeft(ex.duration!);
@@ -366,14 +429,17 @@ export default function Session() {
 
   function beginBreak() {
     if (exIdx >= TOTAL - 1) {
+      playTing(audioCtxRef, "complete");
       finishSession();
       return;
     }
-    setBreakLeft(10);
+    playTing(audioCtxRef, "break-start");
+    setBreakLeft(15);
     setScreen("break");
   }
 
   function advanceToNextExercise() {
+    playTing(audioCtxRef, "break-end");
     setExIdx(i => i + 1);
     setScreen("intro");
     setPhaseIdx(0);
@@ -650,14 +716,23 @@ export default function Session() {
 
               {/* ── Phase timer (phase-once / phase-rep) ── */}
               {(ex.type === "phase-once" || ex.type === "phase-rep") && currentPhase && (
-                <div className="flex-1 flex flex-col items-center justify-center gap-6">
+                <div className="flex-1 flex flex-col items-center justify-center gap-5">
+                  {/* Round / rep label */}
+                  {ex.type === "phase-rep" && (
+                    <div className="text-sm font-bold text-muted-foreground tracking-wider">
+                      {ex.useRoundLabel
+                        ? `Round ${rep + 1} of ${ex.reps}`
+                        : `Rep ${rep + 1} of ${ex.reps}`}
+                    </div>
+                  )}
+
                   {/* Animated breathing circle */}
                   <div className="relative w-64 h-64 flex items-center justify-center">
                     <motion.div
                       className="absolute inset-0 rounded-full opacity-40"
                       style={{ backgroundColor: currentPhase.color }}
                       key={`${exIdx}-${phaseIdx}-outer`}
-                      animate={phaseAnimation(currentPhase.label)}
+                      animate={phaseAnimation(currentPhase.label, currentPhase.duration)}
                     />
                     <motion.div
                       className="w-48 h-48 rounded-full flex flex-col items-center justify-center shadow-lg z-10"
@@ -687,13 +762,40 @@ export default function Session() {
                     {currentPhase.hint}
                   </p>
 
-                  {/* Rep indicator for phase-rep */}
-                  {ex.type === "phase-rep" && (
+                  {/* Rhythm beat bars for Pa Pa Pa / Pa Da Ka / Tongue Trill */}
+                  {ex.isRhythm && currentPhase.label === "SPEAK" && (
+                    <div className="flex gap-2 items-end h-10">
+                      {[0, 1, 2, 3, 4].map(i => (
+                        <motion.div
+                          key={i}
+                          className="w-2.5 rounded-full"
+                          style={{ backgroundColor: currentPhase.color + "99" }}
+                          animate={{ height: ["10px", `${18 + (i % 3) * 10}px`, "10px"] }}
+                          transition={{ repeat: Infinity, duration: 0.46, delay: i * 0.08, ease: "easeInOut" }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Rep dots */}
+                  {ex.type === "phase-rep" && !ex.useRoundLabel && (
                     <div className="flex gap-2">
                       {Array.from({ length: ex.reps! }).map((_, i) => (
                         <div
                           key={i}
                           className={`h-2 w-2 rounded-full transition-all ${i < rep ? "bg-primary scale-100" : i === rep ? "bg-primary/60 scale-125" : "bg-black/15"}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Round dots for round-label exercises */}
+                  {ex.type === "phase-rep" && ex.useRoundLabel && (
+                    <div className="flex gap-2">
+                      {Array.from({ length: ex.reps! }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`h-2 rounded-full transition-all ${i < rep ? "w-4 bg-primary" : i === rep ? "w-4 bg-primary/60" : "w-2 bg-black/15"}`}
                         />
                       ))}
                     </div>
