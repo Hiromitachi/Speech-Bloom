@@ -17,7 +17,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 });
 
 router.get("/:id", requireAuth, async (req: Request, res: Response) => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params.id as string, 10);
   const [exercise] = await db.select().from(exercisesTable).where(eq(exercisesTable.id, id)).limit(1);
   if (!exercise) {
     res.status(404).json({ error: "Exercise not found" });

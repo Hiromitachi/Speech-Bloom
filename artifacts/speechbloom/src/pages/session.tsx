@@ -1,10 +1,29 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useCreateSession, useUpdateSession } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import type { TargetAndTransition } from "framer-motion";
-import { X, ChevronRight } from "lucide-react";
+import { X, ChevronRight, Camera, ThumbsUp } from "lucide-react";
+import { useVoiceCoach, type VoiceCommand } from "@/hooks/use-voice-coach";
+import { useGestureCam } from "@/hooks/use-gesture-cam";
+import { ListeningIndicator } from "@/components/listening-indicator";
+import {
+  phasePrompt,
+  exerciseIntroPrompt,
+  repStartPrompt,
+  repCountPrompt,
+  flashcardWordPrompt,
+  flashcardNextWordPrompt,
+  roundPrompt,
+  breakStartPrompt,
+  breakEndPrompt,
+  sessionCompletePrompt,
+  pauseAckPrompt,
+  resumeAckPrompt,
+  skipAckPrompt,
+  repeatAckPrompt,
+} from "@/lib/coach-prompts";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -207,31 +226,7 @@ function getOrCreateCtx(ref: React.MutableRefObject<AudioContext | null>): Audio
 
 type TingType = "phase" | "break-start" | "break-end" | "complete";
 
-// ─── Voice narration ──────────────────────────────────────────────────────────
-
-function phaseVoice(label: string): string {
-  const map: Record<string, string> = {
-    INHALE:  "Inhale",
-    HOLD:    "Hold",
-    EXHALE:  "Exhale",
-    PAUSE:   "Pause",
-    SPEAK:   "Speak",
-    PHONATE: "Phonate",
-    TRILL:   "Begin trill",
-  };
-  return map[label] ?? `Say ${label}`;
-}
-
-function speak(text: string, voiceRef: React.MutableRefObject<boolean>) {
-  if (!voiceRef.current) return;
-  try {
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.rate  = 0.88;
-    utt.pitch = 1.05;
-    window.speechSynthesis.speak(utt);
-  } catch { /* unsupported */ }
-}
+// ─── Voice narration (now handled by useVoiceCoach hook) ──────────────────────
 
 function playTing(ref: React.MutableRefObject<AudioContext | null>, type: TingType = "phase") {
   const ctx = getOrCreateCtx(ref);
@@ -302,15 +297,93 @@ export default function Session() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const stopMusicRef = useRef<(() => void) | null>(null);
 
-  // Voice narration
+  // ── AI Voice Coach ────────────────────────────────────────────────────────
+  const voiceOnRef = useRef(true); // keep ref for backward compat with ting sounds
+
+  const handleSilence = useCallback(() => {
+    const currentEx = EXERCISES[exIdx];
+    if (!currentEx) return;
+    // For rep-counter: silence = user finished a rep
+    if (currentEx.type === "rep-counter") {
+      handleRepTapFromVoice();
+    }
+    // For flashcard: silence = user said the word
+    if (currentEx.type === "flashcard") {
+      handleFlashcardTapFromVoice();
+    }
+  }, [exIdx]);
+
+  const handleVoiceCommand = useCallback((cmd: VoiceCommand) => {
+    switch (cmd) {
+      case "pause":
+        setIsPaused(true);
+        coach.stopListening();
+        coach.say(pauseAckPrompt());
+        break;
+      case "resume":
+        setIsPaused(false);
+        coach.say(resumeAckPrompt());
+        break;
+      case "next":
+        coach.say(skipAckPrompt(), () => beginBreak());
+        break;
+      case "repeat":
+        coach.say(repeatAckPrompt(), () => handleStart());
+        break;
+      case "stop":
+        coach.shutUp();
+        coach.stopListening();
+        setLocation("/dashboard");
+        break;
+    }
+  }, []);
+
+  const coach = useVoiceCoach({
+    onSilence: handleSilence,
+    onCommand: handleVoiceCommand,
+  });
+
   const [voiceOn, setVoiceOn] = useState(true);
-  const voiceOnRef = useRef(true);
   function toggleVoice() {
-    const next = !voiceOnRef.current;
-    voiceOnRef.current = next;
+    const next = !voiceOn;
     setVoiceOn(next);
-    if (!next) { try { window.speechSynthesis.cancel(); } catch {} }
+    voiceOnRef.current = next;
+    if (!next) {
+      coach.shutUp();
+      coach.stopListening();
+    }
   }
+
+  // ── Gesture Camera (thumbs-up = context-aware action) ──────────────────────
+  const thumbsUpRef = useRef<() => void>(() => {});
+  // Update every render so it always has fresh state
+  thumbsUpRef.current = () => {
+    if (screen === "intro") {
+      handleStart();
+    } else if (screen === "break") {
+      advanceToNextExercise();
+    } else if (screen === "exercise") {
+      const currentEx = EXERCISES[exIdx];
+      if (currentEx.type === "rep-counter") {
+        // Thumbs up = done with all reps, move on
+        setRep(currentEx.reps!);
+        beginBreak();
+      } else if (currentEx.type === "flashcard") {
+        handleFlashcardTap();
+      } else {
+        beginBreak();
+      }
+    }
+  };
+  // Stable callback that reads from ref
+  const handleThumbsUp = useCallback(() => thumbsUpRef.current(), []);
+
+  const gestureCam = useGestureCam({
+    onThumbsUp: handleThumbsUp,
+    cooldownMs: 2000,
+  });
+
+  const [showCamPreview, setShowCamPreview] = useState(true);
 
   const ex = EXERCISES[exIdx];
 
@@ -319,6 +392,9 @@ export default function Session() {
     createSession.mutate({ data: { totalExercises: TOTAL } }, {
       onSuccess: d => setSessionId(d.id),
     });
+    // Auto-start gesture camera
+    gestureCam.start();
+    return () => gestureCam.stop();
   }, []);
 
   // Rotate buddy message every 13s
@@ -419,7 +495,7 @@ export default function Session() {
       if (phaseIdx < phases.length - 1) {
         const next = phaseIdx + 1;
         playTing(audioCtxRef, "phase");
-        speak(phaseVoice(phases[next].label), voiceOnRef);
+        if (voiceOn) coach.say(phasePrompt(phases[next].label));
         setPhaseIdx(next);
         setBuddySeed(s => s + 1);
         setTimeLeft(phases[next].duration);
@@ -432,7 +508,7 @@ export default function Session() {
       if (phaseIdx < phases.length - 1) {
         const next = phaseIdx + 1;
         playTing(audioCtxRef, "phase");
-        speak(phaseVoice(phases[next].label), voiceOnRef);
+        if (voiceOn) coach.say(phasePrompt(phases[next].label));
         setPhaseIdx(next);
         setTimeLeft(phases[next].duration);
         setTimerOn(true);
@@ -440,12 +516,13 @@ export default function Session() {
         const nextRep = rep + 1;
         if (nextRep < ex.reps!) {
           playTing(audioCtxRef, "phase");
-          speak(
-            ex.useRoundLabel
-              ? `Round ${nextRep + 1}. ${phaseVoice(phases[0].label)}`
-              : phaseVoice(phases[0].label),
-            voiceOnRef,
-          );
+          if (voiceOn) {
+            coach.say(
+              ex.useRoundLabel
+                ? `${roundPrompt(nextRep, ex.reps!)} ${phasePrompt(phases[0].label)}`
+                : phasePrompt(phases[0].label),
+            );
+          }
           setRep(nextRep);
           setPhaseIdx(0);
           setBuddySeed(s => s + 1);
@@ -461,7 +538,7 @@ export default function Session() {
       const nextRound = round + 1;
       if (nextRound < ex.rounds!) {
         playTing(audioCtxRef, "phase");
-        speak(`Round ${nextRound + 1}`, voiceOnRef);
+        if (voiceOn) coach.say(roundPrompt(nextRound, ex.rounds!));
         setRound(nextRound);
         setBuddySeed(s => s + 1);
         setTimeLeft(ex.duration!);
@@ -473,21 +550,22 @@ export default function Session() {
   }
 
   function beginBreak() {
+    coach.stopListening();
     if (exIdx >= TOTAL - 1) {
       playTing(audioCtxRef, "complete");
-      speak("Session complete. Well done!", voiceOnRef);
+      if (voiceOn) coach.say(sessionCompletePrompt());
       finishSession();
       return;
     }
     playTing(audioCtxRef, "break-start");
-    speak("Good job. Rest for 15 seconds.", voiceOnRef);
+    if (voiceOn) coach.say(breakStartPrompt());
     setBreakLeft(15);
     setScreen("break");
   }
 
   function advanceToNextExercise() {
     playTing(audioCtxRef, "break-end");
-    speak(`Get ready. ${EXERCISES[exIdx + 1]?.name ?? "Next exercise"}.`, voiceOnRef);
+    if (voiceOn) coach.say(breakEndPrompt(EXERCISES[exIdx + 1]?.name ?? "Next exercise"));
     setExIdx(i => i + 1);
     setScreen("intro");
     setPhaseIdx(0);
@@ -500,6 +578,8 @@ export default function Session() {
   }
 
   function finishSession() {
+    coach.stopListening();
+    gestureCam.stop();
     const dur = Math.floor((Date.now() - sessionStartRef.current) / 1000);
     if (sessionId) {
       updateSession.mutate({ id: sessionId, data: { completed: true, durationSeconds: dur } });
@@ -515,25 +595,42 @@ export default function Session() {
     setBuddySeed(s => s + 1);
 
     if (ex.type === "phase-once" || ex.type === "phase-rep") {
-      speak(phaseVoice(ex.phases![0].label), voiceOnRef);
+      if (voiceOn) coach.say(phasePrompt(ex.phases![0].label));
       setTimeLeft(ex.phases![0].duration);
       setTimerOn(true);
     } else if (ex.type === "countdown" || ex.type === "multi-round") {
-      speak("Begin", voiceOnRef);
+      if (voiceOn) coach.say("Let's begin.");
       setTimeLeft(ex.duration!);
       setTimerOn(true);
+    } else if (ex.type === "rep-counter") {
+      if (voiceOn) coach.say(repStartPrompt(ex.name, ex.reps!));
+      // Start listening for silence-based rep counting
+      coach.startListening(3000);
     } else if (ex.type === "flashcard") {
-      speak(ex.items![0], voiceOnRef);
+      if (voiceOn) coach.say(flashcardWordPrompt(ex.items![0], 0, ex.itemReps!));
+      // Start listening for user saying the word
+      coach.startListening(2500);
     }
     setScreen("exercise");
   }
 
-  // ── Rep counter tap ──────────────────────────────────────────────────────
+  // ── Auto-speak intro & auto-start ────────────────────────────────────────
+  useEffect(() => {
+    if (screen !== "intro" || !voiceOn) return;
+    const introText = exerciseIntroPrompt(ex.name, ex.instruction);
+    coach.say(introText, () => {
+      // Auto-start after coach finishes speaking the intro
+      setTimeout(() => handleStart(), 600);
+    });
+  }, [screen, exIdx]);
+
+  // ── Rep counter tap (manual) ─────────────────────────────────────────────
   function handleRepTap() {
     if (repJustDoneRef.current) return;
     const next = rep + 1;
     setRep(next);
     setBuddySeed(s => s + 1);
+    if (voiceOn) coach.say(repCountPrompt(next, ex.reps!));
     if (next >= ex.reps!) {
       repJustDoneRef.current = true;
       setTimeout(() => {
@@ -543,7 +640,30 @@ export default function Session() {
     }
   }
 
-  // ── Flashcard rep tap ────────────────────────────────────────────────────
+  // ── Rep counter tap (from voice — silence detected) ─────────────────────
+  function handleRepTapFromVoice() {
+    if (repJustDoneRef.current) return;
+    if (screen !== "exercise") return;
+    const currentEx = EXERCISES[exIdx];
+    if (!currentEx || currentEx.type !== "rep-counter") return;
+    const next = rep + 1;
+    setRep(next);
+    setBuddySeed(s => s + 1);
+    if (voiceOn) coach.say(repCountPrompt(next, currentEx.reps!));
+    if (next >= currentEx.reps!) {
+      repJustDoneRef.current = true;
+      coach.stopListening();
+      setTimeout(() => {
+        repJustDoneRef.current = false;
+        beginBreak();
+      }, 1000);
+    } else {
+      // Restart listening for the next rep
+      coach.startListening(3000);
+    }
+  }
+
+  // ── Flashcard rep tap (manual) ───────────────────────────────────────────
   function handleFlashcardTap() {
     const nextRep = itemRep + 1;
     if (nextRep >= ex.itemReps!) {
@@ -551,13 +671,39 @@ export default function Session() {
       if (nextItem >= ex.items!.length) {
         beginBreak();
       } else {
-        speak(ex.items![nextItem], voiceOnRef);
+        if (voiceOn) coach.say(flashcardNextWordPrompt(ex.items![nextItem]));
         setItemIdx(nextItem);
         setItemRep(0);
         setBuddySeed(s => s + 1);
       }
     } else {
       setItemRep(nextRep);
+      if (voiceOn) coach.say(flashcardWordPrompt(ex.items![itemIdx], nextRep, ex.itemReps!));
+    }
+  }
+
+  // ── Flashcard tap (from voice — silence detected) ───────────────────────
+  function handleFlashcardTapFromVoice() {
+    if (screen !== "exercise") return;
+    const currentEx = EXERCISES[exIdx];
+    if (!currentEx || currentEx.type !== "flashcard") return;
+    const nextRep = itemRep + 1;
+    if (nextRep >= currentEx.itemReps!) {
+      const nextItem = itemIdx + 1;
+      if (nextItem >= currentEx.items!.length) {
+        coach.stopListening();
+        beginBreak();
+      } else {
+        if (voiceOn) coach.say(flashcardNextWordPrompt(currentEx.items![nextItem]));
+        setItemIdx(nextItem);
+        setItemRep(0);
+        setBuddySeed(s => s + 1);
+        coach.startListening(2500);
+      }
+    } else {
+      setItemRep(nextRep);
+      if (voiceOn) coach.say(flashcardWordPrompt(currentEx.items![itemIdx], nextRep, currentEx.itemReps!));
+      coach.startListening(2500);
     }
   }
 
@@ -589,24 +735,73 @@ export default function Session() {
           </div>
         </div>
 
-        <Button
-          variant="ghost" size="icon"
-          className="rounded-full bg-black/5 hover:bg-black/10 h-10 w-10 text-lg"
-          onClick={toggleVoice}
-          title={voiceOn ? "Mute voice" : "Unmute voice"}
-        >
-          {voiceOn ? "🔊" : "🔇"}
-        </Button>
+        <div onClick={toggleVoice} className="cursor-pointer" title={voiceOn ? "Tap to mute" : "Tap to unmute"}>
+          {voiceOn ? (
+            <ListeningIndicator
+              isListening={coach.isListening}
+              isHearing={coach.isHearingUser}
+              isSpeaking={coach.isSpeaking}
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-black/5 flex items-center justify-center text-lg">🔇</div>
+          )}
+        </div>
       </header>
 
-      {/* Progress bar */}
-      <div className="px-5 pb-1">
-        <div className="h-1.5 rounded-full bg-black/10 overflow-hidden">
-          <motion.div
-            className="h-full bg-primary rounded-full"
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5 }}
+      {/* Camera PiP + Thumbs-up indicator */}
+      <div className="px-5 pb-2 flex items-center gap-3 z-10">
+        {/* Camera preview */}
+        <div
+          className={`relative rounded-xl overflow-hidden shadow-sm border border-border transition-all ${
+            showCamPreview ? "w-20 h-15" : "w-0 h-0 opacity-0"
+          }`}
+          onClick={() => setShowCamPreview(p => !p)}
+        >
+          <video
+            ref={gestureCam.videoRef}
+            className="w-full h-full object-cover scale-x-[-1]"
+            muted
+            playsInline
           />
+          {gestureCam.isLoading && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+          {!gestureCam.isActive && !gestureCam.isLoading && (
+            <div
+              className="absolute inset-0 bg-black/60 flex items-center justify-center cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); gestureCam.start(); }}
+            >
+              <Camera className="h-4 w-4 text-white" />
+            </div>
+          )}
+        </div>
+
+        {/* Thumbs up flash */}
+        <AnimatePresence>
+          {gestureCam.gesture === "Thumb_Up" && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-bold"
+            >
+              <ThumbsUp className="h-3.5 w-3.5" />
+              Next!
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Progress bar (moved inline) */}
+        <div className="flex-1">
+          <div className="h-1.5 rounded-full bg-black/10 overflow-hidden">
+            <motion.div
+              className="h-full bg-primary rounded-full"
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
         </div>
       </div>
 

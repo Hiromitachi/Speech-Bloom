@@ -25,7 +25,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 });
 
 router.get("/:id", requireAuth, async (req: Request, res: Response) => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params.id as string, 10);
   const [session] = await db.select().from(sessionsTable).where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, req.userId!))).limit(1);
   if (!session) {
     res.status(404).json({ error: "Session not found" });
@@ -48,7 +48,7 @@ router.get("/:id", requireAuth, async (req: Request, res: Response) => {
 });
 
 router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params.id as string, 10);
   const { durationSeconds, completed } = req.body;
   const updates: Partial<typeof sessionsTable.$inferInsert> = {};
   if (durationSeconds !== undefined) updates.durationSeconds = durationSeconds;
@@ -87,7 +87,7 @@ router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
 });
 
 router.post("/:id/exercises", requireAuth, async (req: Request, res: Response) => {
-  const sessionId = parseInt(req.params.id, 10);
+  const sessionId = parseInt(req.params.id as string, 10);
   const { exerciseId, repsCompleted, durationSeconds } = req.body;
 
   const [log] = await db

@@ -45,9 +45,7 @@ export default function Login() {
         className="w-full max-w-sm space-y-8 z-10"
       >
         <div className="text-center space-y-4">
-          <div className="w-24 h-24 bg-primary rounded-full mx-auto flex items-center justify-center shadow-lg">
-            <Mic className="h-12 w-12 text-primary-foreground" />
-          </div>
+          <img src="/logo.png" alt="SpeechBloom Logo" className="w-24 h-24 mx-auto object-contain rounded-2xl shadow-md" />
           <div>
             <h1 className="text-3xl font-extrabold text-foreground tracking-tight">SpeechBloom</h1>
             <p className="text-muted-foreground mt-1 font-medium">Your speech therapy companion</p>

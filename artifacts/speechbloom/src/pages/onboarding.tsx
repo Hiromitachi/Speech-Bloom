@@ -76,9 +76,7 @@ export default function Onboarding() {
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div key="step1" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8 text-center">
-              <div className="w-32 h-32 bg-secondary rounded-full mx-auto flex items-center justify-center mb-8 shadow-sm">
-                <Mic className="h-16 w-16 text-primary" />
-              </div>
+              <img src="/logo.png" alt="SpeechBloom Logo" className="w-32 h-32 mx-auto object-contain rounded-2xl shadow-md mb-8" />
               <h1 className="text-3xl font-bold text-foreground">Welcome to SpeechBloom</h1>
               <p className="text-muted-foreground text-lg">Your warm, encouraging, and therapeutic speech therapy companion.</p>
               <Button size="lg" className="w-full rounded-full h-14 text-lg font-bold shadow-md" onClick={handleNext}>

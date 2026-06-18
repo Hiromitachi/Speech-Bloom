@@ -57,7 +57,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
 });
 
 router.get("/:id/progress", requireAuth, async (req: Request, res: Response) => {
-  const patientId = parseInt(req.params.id, 10);
+  const patientId = parseInt(req.params.id as string, 10);
   const [patient] = await db.select().from(usersTable).where(eq(usersTable.id, patientId)).limit(1);
   if (!patient) { res.status(404).json({ error: "Patient not found" }); return; }
 
