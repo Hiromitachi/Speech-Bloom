@@ -207,6 +207,32 @@ function getOrCreateCtx(ref: React.MutableRefObject<AudioContext | null>): Audio
 
 type TingType = "phase" | "break-start" | "break-end" | "complete";
 
+// ─── Voice narration ──────────────────────────────────────────────────────────
+
+function phaseVoice(label: string): string {
+  const map: Record<string, string> = {
+    INHALE:  "Inhale",
+    HOLD:    "Hold",
+    EXHALE:  "Exhale",
+    PAUSE:   "Pause",
+    SPEAK:   "Speak",
+    PHONATE: "Phonate",
+    TRILL:   "Begin trill",
+  };
+  return map[label] ?? `Say ${label}`;
+}
+
+function speak(text: string, voiceRef: React.MutableRefObject<boolean>) {
+  if (!voiceRef.current) return;
+  try {
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate  = 0.88;
+    utt.pitch = 1.05;
+    window.speechSynthesis.speak(utt);
+  } catch { /* unsupported */ }
+}
+
 function playTing(ref: React.MutableRefObject<AudioContext | null>, type: TingType = "phase") {
   const ctx = getOrCreateCtx(ref);
   if (!ctx) return;
@@ -275,6 +301,16 @@ export default function Session() {
   // Audio refs
   const audioCtxRef = useRef<AudioContext | null>(null);
   const stopMusicRef = useRef<(() => void) | null>(null);
+
+  // Voice narration
+  const [voiceOn, setVoiceOn] = useState(true);
+  const voiceOnRef = useRef(true);
+  function toggleVoice() {
+    const next = !voiceOnRef.current;
+    voiceOnRef.current = next;
+    setVoiceOn(next);
+    if (!next) { try { window.speechSynthesis.cancel(); } catch {} }
+  }
 
   const ex = EXERCISES[exIdx];
 
@@ -383,6 +419,7 @@ export default function Session() {
       if (phaseIdx < phases.length - 1) {
         const next = phaseIdx + 1;
         playTing(audioCtxRef, "phase");
+        speak(phaseVoice(phases[next].label), voiceOnRef);
         setPhaseIdx(next);
         setBuddySeed(s => s + 1);
         setTimeLeft(phases[next].duration);
@@ -395,6 +432,7 @@ export default function Session() {
       if (phaseIdx < phases.length - 1) {
         const next = phaseIdx + 1;
         playTing(audioCtxRef, "phase");
+        speak(phaseVoice(phases[next].label), voiceOnRef);
         setPhaseIdx(next);
         setTimeLeft(phases[next].duration);
         setTimerOn(true);
@@ -402,6 +440,12 @@ export default function Session() {
         const nextRep = rep + 1;
         if (nextRep < ex.reps!) {
           playTing(audioCtxRef, "phase");
+          speak(
+            ex.useRoundLabel
+              ? `Round ${nextRep + 1}. ${phaseVoice(phases[0].label)}`
+              : phaseVoice(phases[0].label),
+            voiceOnRef,
+          );
           setRep(nextRep);
           setPhaseIdx(0);
           setBuddySeed(s => s + 1);
@@ -417,6 +461,7 @@ export default function Session() {
       const nextRound = round + 1;
       if (nextRound < ex.rounds!) {
         playTing(audioCtxRef, "phase");
+        speak(`Round ${nextRound + 1}`, voiceOnRef);
         setRound(nextRound);
         setBuddySeed(s => s + 1);
         setTimeLeft(ex.duration!);
@@ -430,16 +475,19 @@ export default function Session() {
   function beginBreak() {
     if (exIdx >= TOTAL - 1) {
       playTing(audioCtxRef, "complete");
+      speak("Session complete. Well done!", voiceOnRef);
       finishSession();
       return;
     }
     playTing(audioCtxRef, "break-start");
+    speak("Good job. Rest for 15 seconds.", voiceOnRef);
     setBreakLeft(15);
     setScreen("break");
   }
 
   function advanceToNextExercise() {
     playTing(audioCtxRef, "break-end");
+    speak(`Get ready. ${EXERCISES[exIdx + 1]?.name ?? "Next exercise"}.`, voiceOnRef);
     setExIdx(i => i + 1);
     setScreen("intro");
     setPhaseIdx(0);
@@ -467,11 +515,15 @@ export default function Session() {
     setBuddySeed(s => s + 1);
 
     if (ex.type === "phase-once" || ex.type === "phase-rep") {
+      speak(phaseVoice(ex.phases![0].label), voiceOnRef);
       setTimeLeft(ex.phases![0].duration);
       setTimerOn(true);
     } else if (ex.type === "countdown" || ex.type === "multi-round") {
+      speak("Begin", voiceOnRef);
       setTimeLeft(ex.duration!);
       setTimerOn(true);
+    } else if (ex.type === "flashcard") {
+      speak(ex.items![0], voiceOnRef);
     }
     setScreen("exercise");
   }
@@ -499,6 +551,7 @@ export default function Session() {
       if (nextItem >= ex.items!.length) {
         beginBreak();
       } else {
+        speak(ex.items![nextItem], voiceOnRef);
         setItemIdx(nextItem);
         setItemRep(0);
         setBuddySeed(s => s + 1);
@@ -536,7 +589,14 @@ export default function Session() {
           </div>
         </div>
 
-        <div className="w-10" />
+        <Button
+          variant="ghost" size="icon"
+          className="rounded-full bg-black/5 hover:bg-black/10 h-10 w-10 text-lg"
+          onClick={toggleVoice}
+          title={voiceOn ? "Mute voice" : "Unmute voice"}
+        >
+          {voiceOn ? "🔊" : "🔇"}
+        </Button>
       </header>
 
       {/* Progress bar */}
