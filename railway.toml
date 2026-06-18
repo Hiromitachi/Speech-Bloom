@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm run build"
+
+[deploy]
+startCommand = "pnpm start"
+healthcheckPath = "/api/exercises"
+healthcheckTimeout = 100
+restartPolicy = "on-failure"
