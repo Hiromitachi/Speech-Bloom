@@ -4,6 +4,6 @@ buildCommand = "pnpm run build"
 
 [deploy]
 startCommand = "pnpm start"
-healthcheckPath = "/api/exercises"
+healthcheckPath = "/api/healthz"
 healthcheckTimeout = 100
 restartPolicy = "on-failure"
