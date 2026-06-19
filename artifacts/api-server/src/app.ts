@@ -34,6 +34,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.SESSION_SECRET || "speechbloom-secret"));
 
+// Custom request/response logging for health check diagnostics
+app.use((req, res, next) => {
+  logger.info(`[HTTP] Incoming request: ${req.method} ${req.url}`);
+  res.on("finish", () => {
+    logger.info(`[HTTP] Response: ${req.method} ${req.url} -> ${res.statusCode}`);
+  });
+  next();
+});
+
 app.use("/api", router);
 
 // Serve static assets from front-end
