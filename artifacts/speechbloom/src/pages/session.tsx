@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useCreateSession, useUpdateSession } from "@workspace/api-client-react";
+import { useCreateSession, useUpdateSession, useLogExercise } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import type { TargetAndTransition } from "framer-motion";
-import { X, ChevronRight, Camera, ThumbsUp } from "lucide-react";
+import { X, ChevronRight, Camera, ThumbsUp, Pause, Play, RotateCcw, SkipForward, SkipBack } from "lucide-react";
 import { useVoiceCoach, type VoiceCommand } from "@/hooks/use-voice-coach";
 import { useGestureCam } from "@/hooks/use-gesture-cam";
 import { ListeningIndicator } from "@/components/listening-indicator";
@@ -27,7 +27,7 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Phase = { label: string; color: string; bg: string; duration: number; hint: string };
+type Phase = { label: string; color: string; bg: string; duration: number; hint: string; isPrompt?: boolean };
 
 type ExDef = {
   id: number;
@@ -54,20 +54,21 @@ const P = {
   exhale:  { color: "#1E7A4A", bg: "#D4F5E4", label: "EXHALE"  },
   speak:   { color: "#C04B1B", bg: "#FFDFC9", label: "SPEAK"   },
   phonate: { color: "#7B3DAC", bg: "#EEE0FF", label: "PHONATE" },
+  rest:    { color: "#4B5563", bg: "#F3F4F6", label: "REST"    },
 };
 
 // ─── Exercise list ───────────────────────────────────────────────────────────
 
 const EXERCISES: ExDef[] = [
-  // ── 1. Abdominal Breathing — 3 rounds × (10 inhale · 15 hold · 10 exhale) ──
+  // ── 1. Abdominal Breathing — 3 rounds × (5 inhale · 15 hold · 5 exhale) ──
   {
-    id: 1, name: "Abdominal Breathing", subtitle: "3 rounds · 10·15·10", icon: "🌬️",
+    id: 1, name: "Abdominal Breathing", subtitle: "3 rounds · 5·15·5", icon: "🌬️",
     instruction: "Place one hand on your chest and one on your abdomen.\nBreathe using your abdomen, not your chest.",
     type: "phase-rep", reps: 3, useRoundLabel: true,
     phases: [
-      { ...P.inhale, label: "INHALE", duration: 10, hint: "Breathe in slowly through your nose" },
+      { ...P.inhale, label: "INHALE", duration: 5, hint: "Breathe in slowly through your nose" },
       { ...P.hold,   label: "HOLD",   duration: 15, hint: "Hold gently — abdomen expanded" },
-      { ...P.exhale, label: "EXHALE", duration: 10, hint: "Breathe out slowly through pursed lips" },
+      { ...P.exhale, label: "EXHALE", duration: 5, hint: "Breathe out slowly through pursed lips" },
     ],
   },
   // ── 2–7. Rep-counter exercises ────────────────────────────────────────────
@@ -77,26 +78,26 @@ const EXERCISES: ExDef[] = [
   { id: 5,  name: "Tongue Up and Down",   icon: "↕️", instruction: "Stretch your tongue up toward your nose,\nthen down toward your chin.",                          type: "rep-counter", reps: 6 },
   { id: 6,  name: "Tongue Round Movement",icon: "🔄", instruction: "Move your tongue in a full circle\naround the outside of your lips.",                            type: "rep-counter", reps: 6 },
   { id: 7,  name: "Tongue Resistance",    icon: "💪", instruction: "Press your tongue firmly against the roof of your mouth\nor against a clean spoon for resistance.", type: "rep-counter", reps: 6 },
-  // ── 8. Cheek Puff — 6 reps × (10 inhale · 15 hold · 10 exhale) ───────────
+  // ── 8. Cheek Puff — 6 reps × (5 inhale · 15 hold · 5 exhale) ───────────
   {
     id: 8, name: "Cheek Puff Breathing", icon: "🐡",
     instruction: "Fill your cheeks with air, puff both out,\nthen slowly release.",
     type: "phase-rep", reps: 6,
     phases: [
-      { ...P.inhale, duration: 10, hint: "Breathe in and fill your cheeks" },
+      { ...P.inhale, duration: 5, hint: "Breathe in and fill your cheeks" },
       { ...P.hold,   duration: 15, hint: "Keep cheeks puffed — hold it" },
-      { ...P.exhale, duration: 10, hint: "Slowly release the air" },
+      { ...P.exhale, duration: 5, hint: "Slowly release the air" },
     ],
   },
   // ── 9. Rep counter ────────────────────────────────────────────────────────
   { id: 9, name: "Cheek Side to Side", icon: "🔁", instruction: "Push the air from your left cheek\nover to your right cheek, back and forth.", type: "rep-counter", reps: 6 },
-  // ── 10. A · I · U — 6 reps × (10 inhale · 15 A · 5 pause · 15 I · 5 pause · 15 U) ──
+  // ── 10. A · I · U — 6 reps × (5 inhale · 15 A · 5 pause · 15 I · 5 pause · 15 U) ──
   {
     id: 10, name: "Say A · I · U", icon: "🗣️",
     instruction: "Breathe in, then say A, I, U in sequence with short pauses between.\nOpen your mouth wide for each vowel sound.",
     type: "phase-rep", reps: 6,
     phases: [
-      { ...P.inhale, label: "INHALE", duration: 10, hint: "Breathe in deeply" },
+      { ...P.inhale, label: "INHALE", duration: 5, hint: "Breathe in deeply" },
       { ...P.speak,  label: "Aaaaa",  duration: 15, hint: "Say \"Aaaaa\" — long and steady" },
       { ...P.hold,   label: "PAUSE",  duration: 5,  hint: "Short pause" },
       { ...P.speak,  label: "Iiiii",  duration: 15, hint: "Say \"Iiiii\" — long and steady" },
@@ -124,33 +125,33 @@ const EXERCISES: ExDef[] = [
       { ...P.hold,  label: "PAUSE", duration: 3, hint: "Rest — next round coming…" },
     ],
   },
-  // ── 13. Deep Inhalation & Phonate A — 6 reps × (10 inhale · 15 phonate) ──
+  // ── 13. Deep Inhalation & Phonate A — 6 reps × (5 inhale · 15 phonate) ──
   {
     id: 13, name: "Deep Inhalation & Phonate A", icon: "🎤",
     instruction: "Take a deep breath, then say \"Aaaaa\" steadily\nfor as long as you can while exhaling.",
     type: "phase-rep", reps: 6,
     phases: [
-      { ...P.inhale,  duration: 10, hint: "Breathe in deeply" },
+      { ...P.inhale,  duration: 5, hint: "Breathe in deeply" },
       { ...P.phonate, duration: 15, hint: "\"Aaaaa\" — steady and clear" },
     ],
   },
-  // ── 14. Head Tilt Left — 3 reps × (10 inhale · 15 phonate) ──────────────
+  // ── 14. Head Tilt Left — 3 reps × (5 inhale · 15 phonate) ──────────────
   {
     id: 14, name: "Head Tilt Left & Phonate", icon: "↖️",
     instruction: "Gently tilt your head to the left.\nBreathe in, then say \"Aaaaa\" while exhaling.",
     type: "phase-rep", reps: 3,
     phases: [
-      { ...P.inhale,  duration: 10, hint: "Head tilted left — breathe in" },
+      { ...P.inhale,  duration: 5, hint: "Head tilted left — breathe in" },
       { ...P.phonate, duration: 15, hint: "\"Aaaaa\" — steady tone" },
     ],
   },
-  // ── 15. Head Tilt Right — 3 reps × (10 inhale · 15 phonate) ─────────────
+  // ── 15. Head Tilt Right — 3 reps × (5 inhale · 15 phonate) ─────────────
   {
     id: 15, name: "Head Tilt Right & Phonate", icon: "↗️",
     instruction: "Gently tilt your head to the right.\nBreathe in, then say \"Aaaaa\" while exhaling.",
     type: "phase-rep", reps: 3,
     phases: [
-      { ...P.inhale,  duration: 10, hint: "Head tilted right — breathe in" },
+      { ...P.inhale,  duration: 5, hint: "Head tilted right — breathe in" },
       { ...P.phonate, duration: 15, hint: "\"Aaaaa\" — steady tone" },
     ],
   },
@@ -177,6 +178,136 @@ const EXERCISES: ExDef[] = [
     instruction: "Blend each R sound slowly and clearly, 3 times.\nTap \"Said it!\" after each repetition.",
     type: "flashcard", itemReps: 3,
     items: ["r...ah", "r...ay", "r...ee", "r...i", "r...o", "r...oo"],
+  },
+  // ── 19. Super-Supraglottic Swallow — 5 reps × (5 inhale · 5 hold · Swallow/Cough · 3 rest) ──
+  {
+    id: 19, name: "Super-Supraglottic Swallow", icon: "💧",
+    instruction: "1. Take a deep breath.\n2. Hold your breath tightly.\n3. Bear down gently as if lifting something heavy.\n4. Swallow while holding your breath.\n5. Cough immediately after swallowing.\n6. Swallow again.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.inhale, label: "INHALE", duration: 5, hint: "Breathe in deeply" },
+      { ...P.hold,   label: "BEAR DOWN", duration: 5, hint: "Hold breath and bear down gently" },
+      { ...P.speak,  label: "SWALLOW & COUGH", duration: 0, isPrompt: true, hint: "Swallow, cough, then swallow again" },
+      { ...P.rest,   label: "REST", duration: 3, hint: "Relax and rest" },
+    ],
+  },
+  // ── 20. Front Tongue Resistance ──
+  {
+    id: 20, name: "Front Tongue Resistance", icon: "👅",
+    instruction: "Place a spoon in front of your tongue.\nPush against the spoon with your tongue.\nHold firmly.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.hold, label: "HOLD", duration: 5, hint: "Push firmly against the spoon" },
+      { ...P.rest, label: "REST", duration: 3, hint: "Relax your tongue" },
+    ],
+  },
+  // ── 21. Side Tongue Resistance (Left) ──
+  {
+    id: 21, name: "Side Tongue Resistance (Left)", icon: "👈",
+    instruction: "Press tongue against inside of left cheek.\nUse fingers on outside of cheek to provide resistance.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.hold, label: "HOLD", duration: 5, hint: "Press tongue against left cheek" },
+      { ...P.rest, label: "REST", duration: 3, hint: "Relax your tongue" },
+    ],
+  },
+  // ── 22. Side Tongue Resistance (Right) ──
+  {
+    id: 22, name: "Side Tongue Resistance (Right)", icon: "👉",
+    instruction: "Press tongue against inside of right cheek.\nUse fingers on outside of cheek to provide resistance.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.hold, label: "HOLD", duration: 5, hint: "Press tongue against right cheek" },
+      { ...P.rest, label: "REST", duration: 3, hint: "Relax your tongue" },
+    ],
+  },
+  // ── 23. Spoon Bite (Left) ──
+  {
+    id: 23, name: "Spoon Bite (Left)", icon: "🥄",
+    instruction: "Bite gently but firmly on a spoon on the left side of your mouth.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.hold, label: "BITE HOLD", duration: 3, hint: "Bite and hold spoon on left side" },
+      { ...P.rest, label: "REST", duration: 2, hint: "Relax your jaw" },
+    ],
+  },
+  // ── 24. Spoon Bite (Right) ──
+  {
+    id: 24, name: "Spoon Bite (Right)", icon: "🥄",
+    instruction: "Bite gently but firmly on a spoon on the right side of your mouth.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.hold, label: "BITE HOLD", duration: 3, hint: "Bite and hold spoon on right side" },
+      { ...P.rest, label: "REST", duration: 2, hint: "Relax your jaw" },
+    ],
+  },
+  // ── 25. Spoon Hold (Left) ──
+  {
+    id: 25, name: "Spoon Hold (Left)", icon: "🥄",
+    instruction: "Place spoon between teeth on the left side.\nHold steadily.",
+    type: "phase-rep", reps: 1,
+    phases: [
+      { ...P.hold, label: "HOLD", duration: 5, hint: "Hold spoon steadily on left side" },
+    ],
+  },
+  // ── 26. Spoon Hold (Right) ──
+  {
+    id: 26, name: "Spoon Hold (Right)", icon: "🥄",
+    instruction: "Place spoon between teeth on the right side.\nHold steadily.",
+    type: "phase-rep", reps: 1,
+    phases: [
+      { ...P.hold, label: "HOLD", duration: 5, hint: "Hold spoon steadily on right side" },
+    ],
+  },
+  // ── 27. Head Turn Left & Phonate ──
+  {
+    id: 27, name: "Head Turn Left & Phonate", icon: "⬅️",
+    instruction: "Turn head to the left side.\nSustain \"AAA\" continuously.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.phonate, label: "PHONATE", duration: 5, hint: "Sustain \"AAA\" tone" },
+      { ...P.rest,    label: "REST", duration: 3, hint: "Relax and face forward" },
+    ],
+  },
+  // ── 28. Head Turn Right & Phonate ──
+  {
+    id: 28, name: "Head Turn Right & Phonate", icon: "➡️",
+    instruction: "Turn head to the right side.\nSustain \"AAA\" continuously.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.phonate, label: "PHONATE", duration: 5, hint: "Sustain \"AAA\" tone" },
+      { ...P.rest,    label: "REST", duration: 3, hint: "Relax and face forward" },
+    ],
+  },
+  // ── 29. Straw Blowing ──
+  {
+    id: 29, name: "Straw Blowing", icon: "🥤",
+    instruction: "Blow steadily and continuously through a straw.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.speak, label: "BLOW", duration: 5, hint: "Blow steadily through the straw" },
+      { ...P.rest,  label: "REST", duration: 3, hint: "Take a short rest" },
+    ],
+  },
+  // ── 30. Straw Phonation (UUU) ──
+  {
+    id: 30, name: "Straw Phonation (UUU)", icon: "🥤",
+    instruction: "Produce a continuous \"UUU\" sound through a straw.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.phonate, label: "UUU", duration: 5, hint: "Produce \"UUU\" sound through straw" },
+      { ...P.rest,    label: "REST", duration: 3, hint: "Take a short rest" },
+    ],
+  },
+  // ── 31. Wall Push with Voice ──
+  {
+    id: 31, name: "Wall Push with Voice", icon: "🧱",
+    instruction: "Push firmly against a wall.\nProduce \"AAA\" continuously.",
+    type: "phase-rep", reps: 5,
+    phases: [
+      { ...P.phonate, label: "PUSH & VOICE", duration: 5, hint: "Push wall and sustain \"AAA\"" },
+      { ...P.rest,    label: "REST", duration: 3, hint: "Relax and rest" },
+    ],
   },
 ];
 
@@ -261,12 +392,29 @@ function phaseAnimation(label: string, duration = 4): TargetAndTransition {
   return { scale: [1.1, 1.16, 1.1], transition: { repeat: Infinity, duration: 0.44, ease: "easeInOut" as const } };
 }
 
+function getSideFromName(name: string): "Left" | "Right" | null {
+  const lower = name.toLowerCase();
+  if (lower.includes("left")) return "Left";
+  if (lower.includes("right")) return "Right";
+  return null;
+}
+
+function getPhaseStartSpeech(ex: ExDef, phase: Phase, repNum: number): string {
+  if (phase.label === "REST") return "Rest.";
+  if (ex.type === "phase-once") return `Start. ${phasePrompt(phase.label)}`;
+  const side = getSideFromName(ex.name);
+  const sideStr = side ? ` ${side} side.` : "";
+  return `Repetition ${repNum + 1}.${sideStr} Start. ${phasePrompt(phase.label)}`;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Session() {
   const [, setLocation] = useLocation();
   const createSession = useCreateSession();
   const updateSession = useUpdateSession();
+  const logExercise = useLogExercise();
+  const exerciseStartRef = useRef(Date.now());
 
   const [screen, setScreen] = useState<"intro" | "exercise" | "break">("intro");
   const [exIdx, setExIdx] = useState(0);
@@ -311,7 +459,14 @@ export default function Session() {
     if (currentEx.type === "flashcard") {
       handleFlashcardTapFromVoice();
     }
-  }, [exIdx]);
+    // For prompt-based phase-rep: silence = user completed prompt phase
+    if (currentEx.type === "phase-rep") {
+      const currentPhase = currentEx.phases?.[phaseIdx];
+      if (currentPhase?.isPrompt) {
+        handlePromptPhaseDone();
+      }
+    }
+  }, [exIdx, phaseIdx, rep]);
 
   const handleVoiceCommand = useCallback((cmd: VoiceCommand) => {
     switch (cmd) {
@@ -417,6 +572,24 @@ export default function Session() {
     return () => clearTimeout(id);
   }, [screen, breakLeft]);
 
+  // Audio countdown for final 3 seconds of an exercise phase
+  useEffect(() => {
+    if (!timerOn || isPaused || screen !== "exercise" || !voiceOn) return;
+    if (timeLeft > 0 && timeLeft <= 3) {
+      coach.shutUp();
+      coach.say(timeLeft.toString());
+    }
+  }, [timeLeft, timerOn, isPaused, screen, voiceOn]);
+
+  // Audio countdown for final 3 seconds of break
+  useEffect(() => {
+    if (screen !== "break" || !voiceOn) return;
+    if (breakLeft > 0 && breakLeft <= 3) {
+      coach.shutUp();
+      coach.say(breakLeft.toString());
+    }
+  }, [breakLeft, screen, voiceOn]);
+
   // ── Break message cycling (every 3.5s) ───────────────────────────────────
   useEffect(() => {
     if (screen !== "break") return;
@@ -495,7 +668,14 @@ export default function Session() {
       if (phaseIdx < phases.length - 1) {
         const next = phaseIdx + 1;
         playTing(audioCtxRef, "phase");
-        if (voiceOn) coach.say(phasePrompt(phases[next].label));
+        const nextPhase = phases[next];
+        if (voiceOn) {
+          if (nextPhase.label === "REST") {
+            coach.say("Rest.");
+          } else {
+            coach.say(phasePrompt(nextPhase.label));
+          }
+        }
         setPhaseIdx(next);
         setBuddySeed(s => s + 1);
         setTimeLeft(phases[next].duration);
@@ -508,26 +688,41 @@ export default function Session() {
       if (phaseIdx < phases.length - 1) {
         const next = phaseIdx + 1;
         playTing(audioCtxRef, "phase");
-        if (voiceOn) coach.say(phasePrompt(phases[next].label));
+        const nextPhase = phases[next];
+        if (voiceOn) {
+          if (nextPhase.label === "REST") {
+            coach.say("Rest.");
+          } else {
+            coach.say(phasePrompt(nextPhase.label));
+          }
+        }
         setPhaseIdx(next);
-        setTimeLeft(phases[next].duration);
-        setTimerOn(true);
+        if (nextPhase.isPrompt) {
+          setTimeLeft(0);
+          setTimerOn(false);
+          coach.startListening(3000);
+        } else {
+          setTimeLeft(nextPhase.duration);
+          setTimerOn(true);
+        }
       } else {
         const nextRep = rep + 1;
         if (nextRep < ex.reps!) {
           playTing(audioCtxRef, "phase");
           if (voiceOn) {
-            coach.say(
-              ex.useRoundLabel
-                ? `${roundPrompt(nextRep, ex.reps!)} ${phasePrompt(phases[0].label)}`
-                : phasePrompt(phases[0].label),
-            );
+            coach.say(getPhaseStartSpeech(ex, phases[0], nextRep));
           }
           setRep(nextRep);
           setPhaseIdx(0);
           setBuddySeed(s => s + 1);
-          setTimeLeft(phases[0].duration);
-          setTimerOn(true);
+          if (phases[0].isPrompt) {
+            setTimeLeft(0);
+            setTimerOn(false);
+            coach.startListening(3000);
+          } else {
+            setTimeLeft(phases[0].duration);
+            setTimerOn(true);
+          }
         } else {
           beginBreak();
         }
@@ -549,8 +744,65 @@ export default function Session() {
     }
   }
 
+  function handlePromptPhaseDone() {
+    if (screen !== "exercise") return;
+    const phases = ex.phases!;
+    if (phaseIdx < phases.length - 1) {
+      const next = phaseIdx + 1;
+      playTing(audioCtxRef, "phase");
+      const nextPhase = phases[next];
+      if (voiceOn) {
+        if (nextPhase.label === "REST") {
+          coach.say("Rest.");
+        } else {
+          coach.say(phasePrompt(nextPhase.label));
+        }
+      }
+      setPhaseIdx(next);
+      if (nextPhase.isPrompt) {
+        setTimeLeft(0);
+        setTimerOn(false);
+        coach.startListening(3000);
+      } else {
+        setTimeLeft(nextPhase.duration);
+        setTimerOn(true);
+      }
+    } else {
+      const nextRep = rep + 1;
+      if (nextRep < ex.reps!) {
+        playTing(audioCtxRef, "phase");
+        if (voiceOn) {
+          coach.say(getPhaseStartSpeech(ex, phases[0], nextRep));
+        }
+        setRep(nextRep);
+        setPhaseIdx(0);
+        setBuddySeed(s => s + 1);
+        if (phases[0].isPrompt) {
+          setTimeLeft(0);
+          setTimerOn(false);
+          coach.startListening(3000);
+        } else {
+          setTimeLeft(phases[0].duration);
+          setTimerOn(true);
+        }
+      } else {
+        beginBreak();
+      }
+    }
+  }
+
   function beginBreak() {
     coach.stopListening();
+    if (sessionId) {
+      logExercise.mutate({
+        id: sessionId,
+        data: {
+          exerciseId: ex.id,
+          repsCompleted: ex.type === "rep-counter" ? rep : ex.reps || 1,
+          durationSeconds: Math.max(1, Math.floor((Date.now() - exerciseStartRef.current) / 1000)),
+        }
+      });
+    }
     if (exIdx >= TOTAL - 1) {
       playTing(audioCtxRef, "complete");
       if (voiceOn) coach.say(sessionCompletePrompt());
@@ -575,12 +827,42 @@ export default function Session() {
     setItemRep(0);
     setIsPaused(false);
     setBuddySeed(s => s + 1);
+    exerciseStartRef.current = Date.now();
+  }
+
+  function handlePrevious() {
+    if (exIdx > 0) {
+      coach.shutUp();
+      coach.stopListening();
+      setExIdx(i => i - 1);
+      setScreen("intro");
+      setPhaseIdx(0);
+      setRep(0);
+      setRound(0);
+      setItemIdx(0);
+      setItemRep(0);
+      setIsPaused(false);
+      setBuddySeed(s => s + 1);
+      exerciseStartRef.current = Date.now();
+    }
+  }
+
+  function handleRestart() {
+    coach.shutUp();
+    coach.stopListening();
+    handleStart();
+  }
+
+  function handleSkip() {
+    coach.shutUp();
+    coach.stopListening();
+    beginBreak();
   }
 
   function finishSession() {
     coach.stopListening();
     gestureCam.stop();
-    const dur = Math.floor((Date.now() - sessionStartRef.current) / 1000);
+    const dur = Math.max(1, Math.floor((Date.now() - sessionStartRef.current) / 1000));
     if (sessionId) {
       updateSession.mutate({ id: sessionId, data: { completed: true, durationSeconds: dur } });
     }
@@ -593,22 +875,30 @@ export default function Session() {
     setItemIdx(0); setItemRep(0);
     setIsPaused(false);
     setBuddySeed(s => s + 1);
+    exerciseStartRef.current = Date.now();
 
     if (ex.type === "phase-once" || ex.type === "phase-rep") {
-      if (voiceOn) coach.say(phasePrompt(ex.phases![0].label));
-      setTimeLeft(ex.phases![0].duration);
-      setTimerOn(true);
+      const firstPhase = ex.phases![0];
+      if (voiceOn) coach.say(getPhaseStartSpeech(ex, firstPhase, 0));
+      if (firstPhase.isPrompt) {
+        setTimeLeft(0);
+        setTimerOn(false);
+        coach.startListening(3000);
+      } else {
+        setTimeLeft(firstPhase.duration);
+        setTimerOn(true);
+      }
     } else if (ex.type === "countdown" || ex.type === "multi-round") {
       if (voiceOn) coach.say("Let's begin.");
       setTimeLeft(ex.duration!);
       setTimerOn(true);
     } else if (ex.type === "rep-counter") {
-      if (voiceOn) coach.say(repStartPrompt(ex.name, ex.reps!));
-      // Start listening for silence-based rep counting
+      const side = getSideFromName(ex.name);
+      const sideStr = side ? ` ${side} side.` : "";
+      if (voiceOn) coach.say(`Repetition 1.${sideStr} Start.`);
       coach.startListening(3000);
     } else if (ex.type === "flashcard") {
       if (voiceOn) coach.say(flashcardWordPrompt(ex.items![0], 0, ex.itemReps!));
-      // Start listening for user saying the word
       coach.startListening(2500);
     }
     setScreen("exercise");
@@ -630,13 +920,25 @@ export default function Session() {
     const next = rep + 1;
     setRep(next);
     setBuddySeed(s => s + 1);
-    if (voiceOn) coach.say(repCountPrompt(next, ex.reps!));
+    playTing(audioCtxRef, "phase");
     if (next >= ex.reps!) {
       repJustDoneRef.current = true;
+      if (voiceOn) coach.say("Done!");
       setTimeout(() => {
         repJustDoneRef.current = false;
         beginBreak();
       }, 600);
+    } else {
+      if (voiceOn) {
+        coach.say("Rest.");
+        const side = getSideFromName(ex.name);
+        const sideStr = side ? ` ${side} side.` : "";
+        setTimeout(() => {
+          if (screen === "exercise" && !isPaused) {
+            coach.say(`Repetition ${next + 1}.${sideStr} Start.`);
+          }
+        }, 2000);
+      }
     }
   }
 
@@ -649,23 +951,40 @@ export default function Session() {
     const next = rep + 1;
     setRep(next);
     setBuddySeed(s => s + 1);
-    if (voiceOn) coach.say(repCountPrompt(next, currentEx.reps!));
+    playTing(audioCtxRef, "phase");
     if (next >= currentEx.reps!) {
       repJustDoneRef.current = true;
       coach.stopListening();
+      if (voiceOn) coach.say("Done!");
       setTimeout(() => {
         repJustDoneRef.current = false;
         beginBreak();
       }, 1000);
     } else {
-      // Restart listening for the next rep
-      coach.startListening(3000);
+      if (voiceOn) {
+        coach.say("Rest.");
+        const side = getSideFromName(currentEx.name);
+        const sideStr = side ? ` ${side} side.` : "";
+        coach.stopListening();
+        setTimeout(() => {
+          if (screen === "exercise" && !isPaused) {
+            coach.say(`Repetition ${next + 1}.${sideStr} Start.`, () => {
+              coach.startListening(3000);
+            });
+          } else {
+            coach.startListening(3000);
+          }
+        }, 2000);
+      } else {
+        coach.startListening(3000);
+      }
     }
   }
 
   // ── Flashcard rep tap (manual) ───────────────────────────────────────────
   function handleFlashcardTap() {
     const nextRep = itemRep + 1;
+    playTing(audioCtxRef, "phase");
     if (nextRep >= ex.itemReps!) {
       const nextItem = itemIdx + 1;
       if (nextItem >= ex.items!.length) {
@@ -688,6 +1007,7 @@ export default function Session() {
     const currentEx = EXERCISES[exIdx];
     if (!currentEx || currentEx.type !== "flashcard") return;
     const nextRep = itemRep + 1;
+    playTing(audioCtxRef, "phase");
     if (nextRep >= currentEx.itemReps!) {
       const nextItem = itemIdx + 1;
       if (nextItem >= currentEx.items!.length) {
@@ -1001,12 +1321,23 @@ export default function Session() {
                           animate={{ opacity: 1, scale: 1 }}
                           className="text-center"
                         >
-                          <div className="text-5xl font-black" style={{ color: currentPhase.color }}>
-                            {timeLeft}
-                          </div>
-                          <div className="text-xs font-black tracking-widest mt-1" style={{ color: currentPhase.color }}>
-                            {currentPhase.label}
-                          </div>
+                          {currentPhase.isPrompt ? (
+                            <div className="flex flex-col items-center justify-center gap-1 cursor-pointer" onClick={handlePromptPhaseDone}>
+                              <span className="text-4xl">✓</span>
+                              <div className="text-[10px] font-black tracking-widest uppercase px-2" style={{ color: currentPhase.color }}>
+                                Tap when Done
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-5xl font-black" style={{ color: currentPhase.color }}>
+                                {timeLeft}
+                              </div>
+                              <div className="text-xs font-black tracking-widest mt-1" style={{ color: currentPhase.color }}>
+                                {currentPhase.label}
+                              </div>
+                            </>
+                          )}
                         </motion.div>
                       </AnimatePresence>
                     </motion.div>
@@ -1056,14 +1387,15 @@ export default function Session() {
                     </div>
                   )}
 
-                  {/* Pause */}
-                  <Button
-                    variant="outline"
-                    className="rounded-full h-11 px-6 font-semibold bg-white/60"
-                    onClick={() => setIsPaused(p => !p)}
-                  >
-                    {isPaused ? "▶ Resume" : "⏸ Pause"}
-                  </Button>
+                  {currentPhase.isPrompt && (
+                    <Button
+                      size="lg"
+                      className="rounded-full h-12 px-10 text-lg font-bold shadow-md bg-primary text-primary-foreground"
+                      onClick={handlePromptPhaseDone}
+                    >
+                      Done ✓
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -1109,13 +1441,7 @@ export default function Session() {
                     {ex.instruction.split("\n")[0]}
                   </p>
 
-                  <Button
-                    variant="outline"
-                    className="rounded-full h-11 px-6 font-semibold bg-white/60"
-                    onClick={() => setIsPaused(p => !p)}
-                  >
-                    {isPaused ? "▶ Resume" : "⏸ Pause"}
-                  </Button>
+
                 </div>
               )}
 
@@ -1207,6 +1533,57 @@ export default function Session() {
                   )}
                 </div>
               )}
+
+              {/* Media Control Bar */}
+              <div className="flex items-center justify-center gap-4 mt-6">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full h-11 w-11 bg-white/60 hover:bg-white/80 border-black/10"
+                  onClick={handlePrevious}
+                  disabled={exIdx === 0}
+                  title="Previous Exercise"
+                >
+                  <SkipBack className="h-5 w-5 text-foreground" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full h-11 w-11 bg-white/60 hover:bg-white/80 border-black/10"
+                  onClick={handleRestart}
+                  title="Restart Exercise"
+                >
+                  <RotateCcw className="h-5 w-5 text-foreground" />
+                </Button>
+
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="rounded-full h-12 px-8 font-bold shadow-md min-w-[120px]"
+                  onClick={() => setIsPaused(p => !p)}
+                >
+                  {isPaused ? (
+                    <>
+                      <Play className="mr-2 h-4 w-4 fill-current" /> Resume
+                    </>
+                  ) : (
+                    <>
+                      <Pause className="mr-2 h-4 w-4 fill-current" /> Pause
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full h-11 w-11 bg-white/60 hover:bg-white/80 border-black/10"
+                  onClick={handleSkip}
+                  title="Skip Exercise"
+                >
+                  <SkipForward className="h-5 w-5 text-foreground" />
+                </Button>
+              </div>
 
               {/* ── Buddy message (all exercise types) ── */}
               <AnimatePresence mode="wait">

@@ -16,6 +16,13 @@ const PHASE_PROMPTS: Record<string, string[]> = {
   SPEAK: ["Speak.", "Go ahead."],
   PHONATE: ["Phonate. Aaaaa.", "Aaaaa."],
   TRILL: ["Trill. Drrrr.", "Drrrr."],
+  "BEAR DOWN": ["Hold and bear down.", "Hold and bear down gently."],
+  "SWALLOW & COUGH": ["Swallow and cough.", "Swallow and cough now."],
+  REST: ["Rest.", "Take a rest."],
+  "BITE HOLD": ["Bite and hold.", "Bite firmly."],
+  BLOW: ["Blow steadily.", "Blow through the straw."],
+  "PUSH & VOICE": ["Push and voice. Sustain A.", "Push wall and say A."],
+  UUU: ["UUU. Sustain tone through straw.", "Sustain UUU through straw."],
 };
 
 const VOWEL_PROMPTS: Record<string, string[]> = {
@@ -30,14 +37,11 @@ export function phasePrompt(label: string): string {
   return `Say ${label}`;
 }
 
-// ─── Exercise intro (short — just name + one line) ──────────────────────────
+// ─── Exercise intro (short — name + instruction) ──────────────────────────
 
-export function exerciseIntroPrompt(name: string, _instruction: string): string {
-  return pick([
-    `Next: ${name}. Ready?`,
-    `${name}. Let's go.`,
-    `Time for ${name}.`,
-  ]);
+export function exerciseIntroPrompt(name: string, instruction: string): string {
+  const cleanInstruction = instruction.replace(/\n/g, " ");
+  return `Next exercise: ${name}. ${cleanInstruction}. Get ready.`;
 }
 
 // ─── Rep counter ────────────────────────────────────────────────────────────
