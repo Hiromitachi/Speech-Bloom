@@ -91,18 +91,19 @@ const EXERCISES: ExDef[] = [
   },
   // ── 9. Rep counter ────────────────────────────────────────────────────────
   { id: 9, name: "Cheek Side to Side", icon: "🔁", instruction: "Push the air from your left cheek\nover to your right cheek, back and forth.", type: "rep-counter", reps: 6 },
-  // ── 10. A · I · U — 6 reps × (5 inhale · 15 A · 5 pause · 15 I · 5 pause · 15 U) ──
+  // ── 10. A-I-U Sustained Phonation — 5 reps × (5 inhale · 5 Aaa · 2 transition · 5 Iii · 2 transition · 5 Uuu · 5 rest) ──
   {
-    id: 10, name: "Say A · I · U", icon: "🗣️",
-    instruction: "Breathe in, then say A, I, U in sequence with short pauses between.\nOpen your mouth wide for each vowel sound.",
-    type: "phase-rep", reps: 6,
+    id: 10, name: "A-I-U Sustained Phonation", subtitle: "A-I-U Sequence", icon: "🗣️",
+    instruction: "Take a breath (5 sec inhale).\nSustain \"Aaa...\" for 5 seconds.\nImmediately transition to \"Iii...\" for 5 seconds.\nImmediately transition to \"Uuu...\" for 5 seconds.\nThis entire sequence counts as ONE repetition.",
+    type: "phase-rep", reps: 5,
     phases: [
-      { ...P.inhale, label: "INHALE", duration: 5, hint: "Breathe in deeply" },
-      { ...P.speak,  label: "Aaaaa",  duration: 15, hint: "Say \"Aaaaa\" — long and steady" },
-      { ...P.hold,   label: "PAUSE",  duration: 5,  hint: "Short pause" },
-      { ...P.speak,  label: "Iiiii",  duration: 15, hint: "Say \"Iiiii\" — long and steady" },
-      { ...P.hold,   label: "PAUSE",  duration: 5,  hint: "Short pause" },
-      { ...P.speak,  label: "Uuuuu",  duration: 15, hint: "Say \"Uuuuu\" — long and steady" },
+      { ...P.inhale, label: "INHALE",     duration: 5, hint: "Breathe in deeply" },
+      { ...P.speak,  label: "Aaa",        duration: 5, hint: "Sustain \"Aaa\"" },
+      { ...P.rest,   label: "TRANSITION", duration: 2, hint: "Transitioning to \"Iii\"" },
+      { ...P.speak,  label: "Iii",        duration: 5, hint: "Sustain \"Iii\"" },
+      { ...P.rest,   label: "TRANSITION", duration: 2, hint: "Transitioning to \"Uuu\"" },
+      { ...P.speak,  label: "Uuu",        duration: 5, hint: "Sustain \"Uuu\"" },
+      { ...P.rest,   label: "REST",       duration: 5, hint: "Relax and rest" },
     ],
   },
   // ── 11. Pa Pa Pa — 6 rounds × (5s speak · 3s pause) ─────────────────────
@@ -675,7 +676,8 @@ export default function Session() {
           if (nextPhase.label === "REST") {
             coach.say("Rest.");
           } else {
-            coach.say(phasePrompt(nextPhase.label));
+            const prompt = phasePrompt(nextPhase.label);
+            if (prompt) coach.say(prompt);
           }
         }
         setPhaseIdx(next);
@@ -695,7 +697,8 @@ export default function Session() {
           if (nextPhase.label === "REST") {
             coach.say("Rest.");
           } else {
-            coach.say(phasePrompt(nextPhase.label));
+            const prompt = phasePrompt(nextPhase.label);
+            if (prompt) coach.say(prompt);
           }
         }
         setPhaseIdx(next);
@@ -757,7 +760,8 @@ export default function Session() {
         if (nextPhase.label === "REST") {
           coach.say("Rest.");
         } else {
-          coach.say(phasePrompt(nextPhase.label));
+          const prompt = phasePrompt(nextPhase.label);
+          if (prompt) coach.say(prompt);
         }
       }
       setPhaseIdx(next);

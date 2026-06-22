@@ -1,4 +1,5 @@
 import { db, exercisesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
 export const SEED_EXERCISES = [
@@ -87,11 +88,11 @@ export const SEED_EXERCISES = [
   },
   {
     id: 10,
-    name: "Say A · I · U",
+    name: "A-I-U Sustained Phonation",
     category: "vocal",
-    instructions: "Breathe in, then say A, I, U in sequence with short pauses between. Open your mouth wide for each vowel sound.",
-    reps: 6,
-    durationSeconds: 70,
+    instructions: "Take a breath (5 sec inhale). Sustain \"Aaa...\" for 5 seconds. Immediately transition to \"Iii...\" for 5 seconds. Immediately transition to \"Uuu...\" for 5 seconds. This entire sequence counts as ONE repetition.",
+    reps: 5,
+    durationSeconds: 29,
     exerciseType: "timer",
     sortOrder: 10,
   },
@@ -307,17 +308,43 @@ export const SEED_EXERCISES = [
 
 export async function seedExercises() {
   try {
+    logger.info("Checking database exercise definitions...");
     const existing = await db.select().from(exercisesTable);
-    if (existing.length < SEED_EXERCISES.length) {
-      logger.info(`Exercises count in DB is ${existing.length}. Seeding/updating to ${SEED_EXERCISES.length}...`);
-      // Delete existing exercises to avoid ID/order conflicts and start fresh
-      await db.delete(exercisesTable);
-      // Insert all exercises
-      await db.insert(exercisesTable).values(SEED_EXERCISES);
-      logger.info("Exercises seeded successfully!");
-    } else {
-      logger.info("Exercises table already seeded with correct amount.");
+    const existingMap = new Map(existing.map(e => [e.id, e]));
+
+    for (const ex of SEED_EXERCISES) {
+      const exist = existingMap.get(ex.id);
+      if (exist) {
+        // Update if anything changed
+        if (
+          exist.name !== ex.name ||
+          exist.category !== ex.category ||
+          exist.instructions !== ex.instructions ||
+          exist.reps !== ex.reps ||
+          exist.durationSeconds !== ex.durationSeconds ||
+          exist.exerciseType !== ex.exerciseType ||
+          exist.sortOrder !== ex.sortOrder
+        ) {
+          logger.info(`Updating exercise ID ${ex.id} (${ex.name})...`);
+          await db
+            .update(exercisesTable)
+            .set({
+              name: ex.name,
+              category: ex.category,
+              instructions: ex.instructions,
+              reps: ex.reps,
+              durationSeconds: ex.durationSeconds,
+              exerciseType: ex.exerciseType,
+              sortOrder: ex.sortOrder,
+            })
+            .where(eq(exercisesTable.id, ex.id));
+        }
+      } else {
+        logger.info(`Inserting new exercise ID ${ex.id} (${ex.name})...`);
+        await db.insert(exercisesTable).values(ex);
+      }
     }
+    logger.info("Exercises seeded and synchronized successfully!");
   } catch (err) {
     logger.error({ err }, "Failed to seed exercises");
   }

@@ -23,12 +23,16 @@ const PHASE_PROMPTS: Record<string, string[]> = {
   BLOW: ["Blow steadily.", "Blow through the straw."],
   "PUSH & VOICE": ["Push and voice. Sustain A.", "Push wall and say A."],
   UUU: ["UUU. Sustain tone through straw.", "Sustain UUU through straw."],
+  TRANSITION: ["", ""],
 };
 
 const VOWEL_PROMPTS: Record<string, string[]> = {
   Aaaaa: ['Aaaaa.', 'Say Aaaaa.'],
   Iiiii: ['Iiiii.', 'Say Iiiii.'],
   Uuuuu: ['Uuuuu.', 'Say Uuuuu.'],
+  Aaa: ['Aaa.', 'Say Aaa.'],
+  Iii: ['Iii.', 'Say Iii.'],
+  Uuu: ['Uuu.', 'Say Uuu.'],
 };
 
 export function phasePrompt(label: string): string {
