@@ -525,6 +525,8 @@ export default function Session() {
         beginBreak();
       } else if (currentEx.type === "flashcard") {
         handleFlashcardTap();
+      } else if (currentEx.type === "phase-rep" && currentEx.phases?.[phaseIdx]?.isPrompt) {
+        handlePromptPhaseDone();
       } else {
         beginBreak();
       }

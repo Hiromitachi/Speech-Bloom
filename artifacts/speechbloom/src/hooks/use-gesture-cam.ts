@@ -51,7 +51,7 @@ export function useGestureCam(options: UseGestureCamOptions = {}): GestureCamRet
       baseOptions: {
         modelAssetPath:
           "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
-        delegate: "GPU",
+        delegate: "CPU",
       },
       runningMode: "VIDEO",
       numHands: 1,
@@ -78,15 +78,18 @@ export function useGestureCam(options: UseGestureCamOptions = {}): GestureCamRet
 
       if (result.gestures.length > 0) {
         const topGesture = result.gestures[0][0];
-        const name = topGesture.categoryName;
+        let name = topGesture.categoryName;
         const confidence = topGesture.score;
 
+        if (name === "Thumbs_Up") {
+          name = "Thumb_Up";
+        }
         setGesture(name);
 
-        // Thumbs up with high confidence + cooldown
+        // Thumbs up with robust confidence + cooldown
         if (
           name === "Thumb_Up" &&
-          confidence > 0.7 &&
+          confidence > 0.55 &&
           Date.now() - lastThumbsUpRef.current > cooldownMs
         ) {
           lastThumbsUpRef.current = Date.now();
@@ -95,8 +98,8 @@ export function useGestureCam(options: UseGestureCamOptions = {}): GestureCamRet
       } else {
         setGesture(null);
       }
-    } catch {
-      // Frame processing error — skip
+    } catch (err) {
+      console.error("[GestureCam] Frame processing error:", err);
     }
 
     animFrameRef.current = requestAnimationFrame(detectLoop);
